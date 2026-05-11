@@ -1,0 +1,102 @@
+# ============================================================
+# DACH IDP Platform — GitHub Actions CI Pipeline
+# Runs on every push/PR to main and develop branches
+# ============================================================
+
+name: CI — Test & Lint
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  APP_MODE: mock
+  APP_ENV: development
+  USE_SQLITE_FALLBACK: "true"
+  SQLITE_PATH: ./data/test_dach_idp.db
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ── Lint ──────────────────────────────────────────────────
+  lint:
+    name: Lint (ruff + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install lint tools
+        run: pip install ruff mypy
+
+      - name: Ruff lint
+        run: ruff check app/ tests/ --output-format=github
+
+      - name: Ruff format check
+        run: ruff format --check app/ tests/
+
+  # ── Tests ─────────────────────────────────────────────────
+  test:
+    name: Tests (pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create data directory
+        run: mkdir -p data
+
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ \
+            --cov=app \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --asyncio-mode=auto \
+            -v
+
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          file: ./coverage.xml
+          flags: unittests
+
+  # ── Docker Build ─────────────────────────────────────────
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build --target runtime -t dach-idp:${{ github.sha }} .
+
+      - name: Run health check
+        run: |
+          docker run -d \
+            -e APP_MODE=mock \
+            -e USE_SQLITE_FALLBACK=true \
+            -p 8000:8000 \
+            --name dach-idp-test \
+            dach-idp:${{ github.sha }}
+          sleep 15
+          curl -f http://localhost:8000/health || (docker logs dach-idp-test && exit 1)
+          docker stop dach-idp-test

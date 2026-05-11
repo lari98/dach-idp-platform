@@ -1,0 +1,59 @@
+# ============================================================
+# DACH IDP Platform — Docker Compose
+# Local development with mock mode (no Azure credentials needed)
+# ============================================================
+
+version: "3.9"
+
+services:
+  # ── Main API ──────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: dach-idp-api
+    ports:
+      - "8000:8000"
+    environment:
+      APP_MODE: mock
+      APP_ENV: development
+      LOG_LEVEL: INFO
+      USE_SQLITE_FALLBACK: "true"
+      SQLITE_PATH: /app/data/dach_idp_dev.db
+      GDPR_DATA_CONTROLLER_NAME: "DACH IDP Demo GmbH"
+      GDPR_DATA_CONTROLLER_EMAIL: "datenschutz@dach-idp-demo.com"
+      GDPR_DATA_CONTROLLER_COUNTRY: "DE"
+      DEFAULT_LANGUAGE: "de"
+      SUPPORTED_LANGUAGES: "de,en,fr,it"
+      # Paste your Azure credentials below to switch to live mode:
+      # APP_MODE: live
+      # AZURE_DOC_INTEL_ENDPOINT: https://your-resource.cognitiveservices.azure.com/
+      # AZURE_DOC_INTEL_KEY: your-key
+      # AZURE_STORAGE_CONNECTION_STRING: DefaultEndpointsProtocol=https;...
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - dach-idp-net
+
+  # ── Swagger UI (standalone, optional) ───────────────────
+  # swagger:
+  #   image: swaggerapi/swagger-ui
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     API_URL: http://localhost:8000/openapi.json
+
+networks:
+  dach-idp-net:
+    driver: bridge
+
+volumes:
+  app-data:

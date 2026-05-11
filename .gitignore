@@ -1,0 +1,71 @@
+# ============================================================
+# .gitignore — DACH IDP Platform
+# ============================================================
+
+# --- Secrets & Config ---
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.pfx
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
+# --- Virtual environments ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# --- Database / Local data ---
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Logs ---
+logs/
+*.log
+
+# --- Docker ---
+.dockerignore
+
+# --- Azure artifacts ---
+.azure/
+azuredeploy.parameters.json
+
+# --- Test fixtures with real PII ---
+tests/fixtures/real_*
+tests/fixtures/private_*
+
+# --- Uploaded files (never commit real documents) ---
+uploads/
+temp_uploads/
+
+# --- Node (if any frontend added later) ---
+node_modules/
