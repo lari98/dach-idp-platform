@@ -1,10 +1,20 @@
 """
-app/database/models.py
-=======================
+app/database/models.py  [v2.0.0]
+==================================
 SQLAlchemy ORM models.
-Compatible with Azure SQL (MSSQL) and SQLite (local dev).
-Tables: documents_invoice, documents_cv, consent_records,
-        audit_logs, data_subject_requests, retention_schedule.
+Compatible with Azure SQL (MSSQL) and SQLite (local dev / mock mode).
+
+v2.0.0 additions to CVDocument:
+  - ats_match_score          (Float)
+  - matched_keywords_json    (JSON)
+  - missing_keywords_json    (JSON)
+  - improvement_suggestions_json (JSON)
+  - dach_work_eligibility_notes (Text)
+  - manual_review_required   (Boolean)
+  - risk_flags_json          (JSON)
+  - candidate_country        (String)
+  - candidate_language       (String)
+  - review_queue_priority    (Integer)
 """
 from __future__ import annotations
 
@@ -93,7 +103,7 @@ class InvoiceDocument(Base):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# CV Documents
+# CV Documents  [v2.0.0 — extended with dashboard/recruiter fields]
 # ──────────────────────────────────────────────────────────────────────────────
 
 class CVDocument(Base):
@@ -112,6 +122,12 @@ class CVDocument(Base):
     location = Column(String(500), nullable=True)
     nationality = Column(String(200), nullable=True)
 
+    # Geographic / language dimensions (for dashboards)
+    candidate_country = Column(String(5), nullable=True,
+                               comment="ISO 3166-1 alpha-2: DE, AT, CH, FR, IT, OTHER")
+    candidate_language = Column(String(10), nullable=True,
+                                comment="BCP-47 primary language: de, en, fr, it")
+
     # Professional
     current_title = Column(String(500), nullable=True)
     years_of_experience = Column(Float, nullable=True)
@@ -126,22 +142,47 @@ class CVDocument(Base):
     german_proficiency = Column(String(20), nullable=True)
     languages_json = Column(JSON, nullable=True)
 
-    # ATS
-    ats_score = Column(Float, nullable=True)
+    # ── v2.0.0 ATS fields ────────────────────────────────────────────────────
+    ats_score = Column(Float, nullable=True,
+                       comment="Overall ATS score 0-100 (v1: ats_score)")
+    ats_match_score = Column(Float, nullable=True,
+                             comment="v2: explicit match score alias, 0-100")
     ats_details_json = Column(JSON, nullable=True)
+    matched_keywords_json = Column(JSON, nullable=True,
+                                   comment="List of keywords found in both CV and JD")
+    missing_keywords_json = Column(JSON, nullable=True,
+                                   comment="Keywords in JD not found in CV")
 
-    # DACH eligibility
+    # ── v2.0.0 DACH eligibility ───────────────────────────────────────────────
     dach_eligibility = Column(String(50), nullable=True)
-    dach_eligibility_note = Column(Text, nullable=True)
+    dach_work_eligibility_notes = Column(Text, nullable=True,
+                                         comment="v2: explicit eligibility note field (informational only)")
 
-    # AI-generated fields
+    # ── v2.0.0 Recruiter / review fields ─────────────────────────────────────
     recruiter_summary = Column(Text, nullable=True)
-    improvement_suggestions_json = Column(JSON, nullable=True)
+    improvement_suggestions_json = Column(JSON, nullable=True,
+                                          comment="v2: list of actionable improvement suggestions")
+    improvement_suggestion_count = Column(Integer, default=0,
+                                          comment="v2: count for dashboard filtering")
 
-    # Quality
+    # ── v2.0.0 Review queue / risk ────────────────────────────────────────────
+    manual_review_required = Column(Boolean, default=False,
+                                    comment="v2: explicit flag (alias for requires_manual_review)")
+    review_queue_priority = Column(Integer, default=0,
+                                   comment="v2: 0=low,1=medium,2=high priority in review queue")
+    risk_flags_json = Column(JSON, nullable=True,
+                              comment="v2: list of risk flag strings, e.g. ['missing_iban','low_confidence']")
+    missing_work_eligibility = Column(Boolean, default=False,
+                                      comment="v2: True if dach_eligibility is UNKNOWN")
+
+    # Quality (existing)
     overall_confidence = Column(Float, default=0.0)
     requires_manual_review = Column(Boolean, default=False)
     validation_warnings_json = Column(JSON, nullable=True)
+
+    # Processing status
+    processing_status = Column(String(30), default="complete",
+                                comment="pending | processing | complete | failed")
 
     # GDPR
     consent_id = Column(String(100), nullable=True)
@@ -160,57 +201,7 @@ class CVDocument(Base):
 class ConsentRecord(Base):
     __tablename__ = "consent_records"
 
-    id = Column(String(100), primary_key=True)   # consent_id
+    id = Column(String(100), primary_key=True)
     document_id = Column(String(36), nullable=False)
     document_type = Column(String(20), nullable=False)
-    data_subject_identifier = Column(String(200), nullable=False)   # pseudonymised
-    legal_basis = Column(String(50), nullable=False)
-    processing_purposes_json = Column(JSON, nullable=False)
-    granted_at = Column(DateTime(timezone=True), nullable=False)
-    expires_at = Column(DateTime(timezone=True), nullable=True)
-    withdrawn_at = Column(DateTime(timezone=True), nullable=True)
-    status = Column(String(30), default="granted")
-    ip_address_hash = Column(String(200), nullable=True)
-    consent_text_version = Column(String(20), default="1.0")
-    controller_name = Column(String(500), nullable=False)
-    controller_email = Column(String(500), nullable=False)
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# GDPR — Audit Log (immutable)
-# ──────────────────────────────────────────────────────────────────────────────
-
-class AuditLog(Base):
-    __tablename__ = "audit_logs"
-
-    id = Column(String(100), primary_key=True)   # audit_id
-    timestamp = Column(DateTime(timezone=True), nullable=False)
-    action = Column(String(100), nullable=False)
-    document_id = Column(String(36), nullable=True)
-    document_type = Column(String(20), nullable=True)
-    actor_id = Column(String(200), nullable=False)
-    actor_role = Column(String(100), nullable=False)
-    ip_address_hash = Column(String(200), nullable=True)
-    details_json = Column(JSON, nullable=True)
-    outcome = Column(String(20), default="success")
-    error_message = Column(Text, nullable=True)
-    retention_years = Column(Integer, default=10)
-
-
-# ──────────────────────────────────────────────────────────────────────────────
-# GDPR — Data Subject Requests
-# ──────────────────────────────────────────────────────────────────────────────
-
-class DataSubjectRequestRecord(Base):
-    __tablename__ = "data_subject_requests"
-
-    id = Column(String(100), primary_key=True)   # dsr_id
-    request_type = Column(String(50), nullable=False)
     data_subject_identifier = Column(String(200), nullable=False)
-    received_at = Column(DateTime(timezone=True), nullable=False)
-    deadline = Column(DateTime(timezone=True), nullable=False)
-    status = Column(String(30), default="received")
-    affected_document_ids_json = Column(JSON, nullable=True)
-    completed_at = Column(DateTime(timezone=True), nullable=True)
-    response_notes = Column(Text, nullable=True)
-    fulfilled_by = Column(String(200), nullable=True)

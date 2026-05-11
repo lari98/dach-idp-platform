@@ -1,0 +1,16 @@
+dsr_id,request_type,received_at,deadline,status,days_to_deadline
+dsr-813da7063f,rectification,2026-04-22,2026-05-22,in_progress,11
+dsr-b3001710f2,portability,2026-01-22,2026-02-21,completed,-79
+dsr-12e88fd1dd,access,2026-04-29,2026-05-29,completed,18
+dsr-8463e9136f,access,2026-04-07,2026-05-07,completed,-4
+dsr-0babea4887,portability,2026-03-13,2026-04-12,completed,-29
+dsr-7eb4414ba3,portability,2026-02-25,2026-03-27,completed,-45
+dsr-f963e37306,rectification,2026-04-27,2026-05-27,in_progress,16
+dsr-949dbc8909,objection,2026-05-07,2026-06-06,completed,26
+dsr-6efd1a11c5,erasure,2026-03-30,2026-04-29,completed,-12
+dsr-76145528c9,rectification,2026-02-17,2026-03-19,overdue,-53
+dsr-e3eccc39c8,rectification,2026-01-14,2026-02-13,completed,-87
+dsr-bb3a892e03,access,2026-04-26,2026-05-26,in_progress,15
+dsr-983018c250,rectification,2026-05-06,2026-06-05,completed,25
+dsr-1df28acef2,erasure,2026-04-26,2026-05-26,received,15
+dsr-d18a0e47a3,erasure,2026-01-17,2026-02-16,completed,-84

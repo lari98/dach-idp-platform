@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DACH IDP Platform — Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a;
+    --border: #2d3251; --accent: #4f8ef7; --accent2: #7c3aed;
+    --green: #22c55e; --yellow: #f59e0b; --red: #ef4444;
+    --orange: #f97316; --teal: #14b8a6; --pink: #ec4899;
+    --text: #e2e8f0; --muted: #8892a4; --white: #ffffff;
+    --card-radius: 12px; --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
+
+  /* ── Header ── */
+  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon { width: 38px; height: 38px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .logo h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  .logo p { font-size: 11px; color: var(--muted); }
+  .header-right { display: flex; align-items: center; gap: 14px; }
+  .badge { padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-mock { background: rgba(249,115,22,0.15); color: var(--orange); border: 1px solid rgba(249,115,22,0.3); }
+  .badge-gdpr { background: rgba(34,197,94,0.15); color: var(--green); border: 1px solid rgba(34,197,94,0.3); }
+  .date-display { font-size: 12px; color: var(--muted); }
+
+  /* ── Nav tabs ── */
+  .nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; gap: 4px; overflow-x: auto; }
+  .tab { padding: 12px 18px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.2s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-icon { margin-right: 6px; }
+
+  /* ── Layout ── */
+  .main { padding: 24px 28px; max-width: 1600px; margin: 0 auto; }
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ── KPI Grid ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 18px 20px; position: relative; overflow: hidden; }
+  .kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  .kpi.blue::before { background: var(--accent); }
+  .kpi.green::before { background: var(--green); }
+  .kpi.yellow::before { background: var(--yellow); }
+  .kpi.red::before { background: var(--red); }
+  .kpi.purple::before { background: var(--accent2); }
+  .kpi.teal::before { background: var(--teal); }
+  .kpi.orange::before { background: var(--orange); }
+  .kpi.pink::before { background: var(--pink); }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .kpi-trend { font-size: 11px; margin-top: 6px; }
+  .kpi-trend.up { color: var(--green); }
+  .kpi-trend.down { color: var(--red); }
+  .kpi-trend.warn { color: var(--yellow); }
+
+  /* ── Chart cards ── */
+  .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; margin-bottom: 24px; }
+  .chart-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 24px; }
+  .chart-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 24px; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 20px; }
+  .chart-card.wide { grid-column: span 2; }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .chart-sub { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+  .chart-wrap { position: relative; height: 220px; }
+  .chart-wrap.tall { height: 300px; }
+  .chart-wrap.short { height: 160px; }
+
+  /* ── Filter bar ── */
+  .filter-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 14px 20px; margin-bottom: 20px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .filter-bar label { font-size: 11px; color: var(--muted); margin-right: 4px; }
+  .filter-bar select, .filter-bar input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 10px; font-size: 12px; outline: none; cursor: pointer; }
+  .filter-bar select:focus, .filter-bar input:focus { border-color: var(--accent); }
+  .filter-sep { color: var(--border); }
+
+  /* ── Table ── */
+  .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); margin-bottom: 20px; overflow: hidden; }
+  .table-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .table-header h3 { font-size: 13px; font-weight: 600; }
+  .table-count { font-size: 11px; color: var(--muted); }
+  table { width: 100%; border-collapse: collapse; }
+  th { padding: 10px 16px; font-size: 11px; font-weight: 600; color: var(--muted); text-align: left; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--border); background: var(--surface2); }
+  td { padding: 11px 16px; font-size: 12px; border-bottom: 1px solid rgba(45,50,81,0.5); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(79,142,247,0.04); }
+
+  /* ── Status / badges ── */
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+  .pill-green { background: rgba(34,197,94,0.15); color: var(--green); }
+  .pill-yellow { background: rgba(245,158,11,0.15); color: var(--yellow); }
+  .pill-red { background: rgba(239,68,68,0.15); color: var(--red); }
+  .pill-blue { background: rgba(79,142,247,0.15); color: var(--accent); }
+  .pill-orange { background: rgba(249,115,22,0.15); color: var(--orange); }
+  .pill-purple { background: rgba(124,58,237,0.15); color: var(--accent2); }
+  .pill-gray { background: rgba(136,146,164,0.15); color: var(--muted); }
+
+  /* ── Confidence bar ── */
+  .conf-bar { display: flex; align-items: center; gap: 8px; }
+  .conf-track { background: var(--surface2); border-radius: 4px; height: 6px; flex: 1; overflow: hidden; }
+  .conf-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+  .conf-label { font-size: 11px; min-width: 36px; text-align: right; }
+
+  /* ── Section title ── */
+  .section-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .section-desc { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+
+  /* ── Anomaly cards ── */
+  .anomaly-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .anomaly-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 16px 20px; border-left: 3px solid; }
+  .anomaly-card.error { border-left-color: var(--red); }
+  .anomaly-card.warn { border-left-color: var(--yellow); }
+  .anomaly-card.info { border-left-color: var(--accent); }
+  .anomaly-title { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .anomaly-body { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .anomaly-count { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+
+  /* ── Progress rings ── */
+  .ring-wrap { display: flex; justify-content: center; align-items: center; padding: 10px 0; gap: 30px; flex-wrap: wrap; }
+  .ring-item { text-align: center; }
+  .ring-label { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .ring-value { font-size: 13px; font-weight: 700; }
+
+  /* ── Skill bar list ── */
+  .skill-list { display: flex; flex-direction: column; gap: 8px; }
+  .skill-row { display: flex; align-items: center; gap: 10px; }
+  .skill-name { font-size: 12px; min-width: 140px; }
+  .skill-track { flex: 1; background: var(--surface2); border-radius: 4px; height: 8px; }
+  .skill-fill { height: 100%; border-radius: 4px; }
+  .skill-count { font-size: 11px; color: var(--muted); min-width: 30px; text-align: right; }
+
+  /* ── GDPR compliance ── */
+  .gdpr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .gdpr-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); padding: 20px; }
+  .gdpr-icon { font-size: 24px; margin-bottom: 10px; }
+  .gdpr-title { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .gdpr-value { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .gdpr-detail { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+  /* ── Footer ── */
+  .footer { border-top: 1px solid var(--border); padding: 16px 28px; text-align: center; font-size: 11px; color: var(--muted); margin-top: 40px; }
+
+  @media (max-width: 900px) {
+    .chart-grid-3 { grid-template-columns: 1fr; }
+    .chart-card.wide { grid-column: span 1; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">🇩🇪</div>
+    <div>
+      <h1>DACH IDP Platform</h1>
+      <p>Intelligent Document Processing — DE · AT · CH</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="badge badge-mock">MOCK MODE</span>
+    <span class="badge badge-gdpr">✓ GDPR/DSGVO</span>
+    <span class="date-display" id="dateDisplay"></span>
+  </div>
+</header>
+
+<!-- ── Navigation ─────────────────────────────────────────────── -->
+<nav class="nav">
+  <div class="tab active" data-tab="overview">📊 Overview</div>
+  <div class="tab" data-tab="invoices">🧾 Invoices</div>
+  <div class="tab" data-tab="cvs">👤 Candidates / CVs</div>
+  <div class="tab" data-tab="review">⚠️ Review Queue</div>
+  <div class="tab" data-tab="gdpr">🔒 GDPR / Compliance</div>
+  <div class="tab" data-tab="anomalies">🚨 Anomalies</div>
+</nav>
+
+<main class="main">
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 1 — OVERVIEW
+════════════════════════════════════════════════════════════════ -->
+<section class="section active" id="tab-overview">
+  <h2 class="section-title">Platform Overview</h2>
+  <p class="section-desc">All documents processed across DE · AT · CH · Multilingual (DE / EN / FR / IT)</p>
+
+  <div class="kpi-grid">
+    <div class="kpi blue">
+      <div class="kpi-label">Total Documents</div>
+      <div class="kpi-value">80</div>
+      <div class="kpi-sub">60 invoices + 20 CVs</div>
+      <div class="kpi-trend up">↑ +12% vs last month</div>
+    </div>
+    <div class="kpi green">
+      <div class="kpi-label">Invoices Processed</div>
+      <div class="kpi-value">60</div>
+      <div class="kpi-sub">DE: 30 · AT: 15 · CH: 15</div>
+      <div class="kpi-trend up">↑ Auto-approved: 58%</div>
+    </div>
+    <div class="kpi purple">
+      <div class="kpi-label">CVs Processed</div>
+      <div class="kpi-value">20</div>
+      <div class="kpi-sub">6 role categories</div>
+      <div class="kpi-trend up">↑ Avg ATS: 20.8 / 100</div>
+    </div>
+    <div class="kpi yellow">
+      <div class="kpi-label">Pending Review</div>
+      <div class="kpi-value">28</div>
+      <div class="kpi-sub">25 invoices + 3 CVs</div>
+      <div class="kpi-trend warn">⚠ Action required</div>
+    </div>
+    <div class="kpi teal">
+      <div class="kpi-label">Avg Confidence</div>
+      <div class="kpi-value">83%</div>
+      <div class="kpi-sub">Invoices: 77.5% · CVs: 89.1%</div>
+      <div class="kpi-trend up">↑ Above threshold</div>
+    </div>
+    <div class="kpi orange">
+      <div class="kpi-label">Invoice Volume</div>
+      <div class="kpi-value">€405k</div>
+      <div class="kpi-sub">+ CHF 75.9k</div>
+      <div class="kpi-trend up">↑ EUR · CHF processed</div>
+    </div>
+    <div class="kpi red">
+      <div class="kpi-label">Anomalies / Errors</div>
+      <div class="kpi-value">7</div>
+      <div class="kpi-sub">Low-conf + validation fails</div>
+      <div class="kpi-trend down">↓ Requires attention</div>
+    </div>
+    <div class="kpi pink">
+      <div class="kpi-label">GDPR DSRs</div>
+      <div class="kpi-value">15</div>
+      <div class="kpi-sub">2 overdue · 5 in progress</div>
+      <div class="kpi-trend warn">⚠ 2 past deadline</div>
+    </div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Documents Processed by Month</div>
+      <div class="chart-sub">Rolling 12 months — invoices vs CVs</div>
+      <div class="chart-wrap"><canvas id="monthlyChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Document Distribution by Country</div>
+      <div class="chart-sub">DACH region breakdown</div>
+      <div class="chart-wrap"><canvas id="countryChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Processing Status</div>
+      <div class="chart-sub">All document types</div>
+      <div class="chart-wrap"><canvas id="statusChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Language Distribution</div>
+      <div class="chart-sub">DE · EN · FR · IT</div>
+      <div class="chart-wrap"><canvas id="langChart"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 2 — INVOICES
+════════════════════════════════════════════════════════════════ -->
+<section class="section" id="tab-invoices">
+  <h2 class="section-title">Invoice Analytics</h2>
+  <p class="section-desc">60 invoices · EUR + CHF · DE · AT · CH · VAT rates: 7% / 10% / 19% / 20% / 8.1% / 2.6%</p>
+
+  <div class="filter-bar">
+    <label>Country</label>
+    <select id="inv-country-filter">
+      <option value="all">All Countries</option>
+      <option value="DE">🇩🇪 Germany</option>
+      <option value="AT">🇦🇹 Austria</option>
+      <option value="CH">🇨🇭 Switzerland</option>
+    </select>
+    <span class="filter-sep">|</span>
+    <label>Currency</label>
+    <select id="inv-currency-filter">
+      <option value="all">All Currencies</option>
+      <option value="EUR">€ EUR</option>
+      <option value="CHF">CHF</option>
+    </select>
+    <span class="filter-sep">|</span>
+    <label>Review Status</label>
+    <select id="inv-review-filter">
+      <option value="all">All</option>
+      <option value="auto_approved">Auto Approved</option>
+      <option value="manual_review">Manual Review</option>
+    </select>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi blue"><div class="kpi-label">Total Invoices</div><div class="kpi-value">60</div><div class="kpi-sub">All vendors, all countries</div></div>
+    <div class="kpi green"><div class="kpi-label">Auto-Approved</div><div class="kpi-value">35</div><div class="kpi-sub">Confidence ≥ 75%</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Manual Review</div><div class="kpi-value">25</div><div class="kpi-sub">Confidence &lt; 75%</div></div>
+    <div class="kpi teal"><div class="kpi-label">EUR Volume</div><div class="kpi-value">€405k</div><div class="kpi-sub">DE + AT invoices</div></div>
+    <div class="kpi orange"><div class="kpi-label">CHF Volume</div><div class="kpi-value">CHF 75.9k</div><div class="kpi-sub">Switzerland invoices</div></div>
+    <div class="kpi purple"><div class="kpi-label">Avg Confidence</div><div class="kpi-value">77.5%</div><div class="kpi-sub">Threshold: 75%</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Invoices by Country</div>
+      <div class="chart-sub">Document count per DACH nation</div>
+      <div class="chart-wrap"><canvas id="invCountryChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Invoice Volume by Month (€ / CHF)</div>
+      <div class="chart-sub">Monthly gross amounts — EUR and CHF</div>
+      <div class="chart-wrap"><canvas id="invVolumeChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Confidence Score Distribution</div>
+      <div class="chart-sub">Field-level extraction quality</div>
+      <div class="chart-wrap"><canvas id="invConfChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">VAT Rate Distribution</div>
+      <div class="chart-sub">Detected VAT rates by country</div>
+      <div class="chart-wrap"><canvas id="vatChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Top vendors table -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3>Top Vendors by Invoice Count</h3>
+      <span class="table-count">8 vendors</span>
+    </div>
+    <table>
+      <thead><tr><th>Vendor</th><th>Country</th><th>Currency</th><th>Invoices</th><th>Total Value</th><th>Avg Confidence</th><th>Review Rate</th></tr></thead>
+      <tbody id="vendorTable"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 3 — CVs / CANDIDATES
+════════════════════════════════════════════════════════════════ -->
+<section class="section" id="tab-cvs">
+  <h2 class="section-title">Candidate Pipeline</h2>
+  <p class="section-desc">20 candidates · ATS scoring · DACH work eligibility · DE · EN · FR · IT</p>
+
+  <div class="filter-bar">
+    <label>Role</label>
+    <select id="cv-role-filter">
+      <option value="all">All Roles</option>
+      <option value="engineering">Engineering</option>
+      <option value="finance">Finance</option>
+      <option value="data_science">Data Science</option>
+      <option value="consulting">Consulting</option>
+      <option value="hr">HR</option>
+      <option value="management">Management</option>
+    </select>
+    <span class="filter-sep">|</span>
+    <label>Country</label>
+    <select id="cv-country-filter">
+      <option value="all">All Countries</option>
+      <option value="DE">🇩🇪 Germany</option>
+      <option value="AT">🇦🇹 Austria</option>
+      <option value="CH">🇨🇭 Switzerland</option>
+      <option value="OTHER">Other</option>
+    </select>
+    <span class="filter-sep">|</span>
+    <label>Eligibility</label>
+    <select id="cv-elig-filter">
+      <option value="all">All</option>
+      <option value="eu_eea_citizen">EU/EEA Citizen</option>
+      <option value="swiss_citizen">Swiss Citizen</option>
+      <option value="work_permit_required">Permit Required</option>
+    </select>
+    <span class="filter-sep">|</span>
+    <label>Review</label>
+    <select id="cv-review-filter">
+      <option value="all">All</option>
+      <option value="yes">Needs Review</option>
+      <option value="no">Cleared</option>
+    </select>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi blue"><div class="kpi-label">Total Candidates</div><div class="kpi-value">20</div><div class="kpi-sub">6 role categories</div></div>
+    <div class="kpi green"><div class="kpi-label">EU/EEA Citizens</div><div class="kpi-value">12</div><div class="kpi-sub">Immediate work authorisation</div></div>
+    <div class="kpi teal"><div class="kpi-label">Swiss Citizens</div><div class="kpi-value">3</div><div class="kpi-sub">Bilateral agreement CH-EU</div></div>
+    <div class="kpi orange"><div class="kpi-label">Permit Required</div><div class="kpi-value">5</div><div class="kpi-sub">Verify with immigration counsel</div></div>
+    <div class="kpi purple"><div class="kpi-label">Avg ATS Score</div><div class="kpi-value">20.8</div><div class="kpi-sub">/ 100 (vs sample JD)</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Manual Review</div><div class="kpi-value">3</div><div class="kpi-sub">Low confidence / unknown eligibility</div></div>
+    <div class="kpi pink"><div class="kpi-label">Missing Eligibility</div><div class="kpi-value">0</div><div class="kpi-sub">All candidates classified</div></div>
+    <div class="kpi red"><div class="kpi-label">Avg Improvements</div><div class="kpi-value">2.1</div><div class="kpi-sub">Suggestions per candidate</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">Candidates by Role Category</div>
+      <div class="chart-sub">Target role distribution</div>
+      <div class="chart-wrap"><canvas id="cvRoleChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">DACH Work Eligibility</div>
+      <div class="chart-sub">Informational classification only</div>
+      <div class="chart-wrap"><canvas id="cvEligChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">ATS Match Score Distribution</div>
+      <div class="chart-sub">0–100 scoring vs. sample JD keywords</div>
+      <div class="chart-wrap"><canvas id="atsDistChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">German Language Proficiency</div>
+      <div class="chart-sub">Critical dimension for DACH market</div>
+      <div class="chart-wrap"><canvas id="germanLangChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Top Missing Skills</div>
+      <div class="chart-sub">Keywords in JD not found in CVs (frequency)</div>
+      <div class="chart-wrap tall">
+        <div class="skill-list" id="missingSkillsList"></div>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Candidates by Country / Language</div>
+      <div class="chart-sub">Location and primary language</div>
+      <div class="chart-wrap tall"><canvas id="cvCountryChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Candidate table -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3>Candidate Register</h3>
+      <span class="table-count" id="cvTableCount">20 candidates</span>
+    </div>
+    <table>
+      <thead><tr><th>Name</th><th>Role</th><th>Country</th><th>Experience</th><th>German</th><th>ATS Score</th><th>Eligibility</th><th>Improvements</th><th>Status</th></tr></thead>
+      <tbody id="cvTable"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 4 — REVIEW QUEUE
+════════════════════════════════════════════════════════════════ -->
+<section class="section" id="tab-review">
+  <h2 class="section-title">Manual Review Queue</h2>
+  <p class="section-desc">Documents flagged for human review — low confidence scores, missing fields, unknown eligibility</p>
+
+  <div class="kpi-grid">
+    <div class="kpi red"><div class="kpi-label">High Priority</div><div class="kpi-value">4</div><div class="kpi-sub">Unknown eligibility / critical fields missing</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Medium Priority</div><div class="kpi-value">11</div><div class="kpi-sub">Low confidence (&lt;70%)</div></div>
+    <div class="kpi blue"><div class="kpi-label">Low Priority</div><div class="kpi-value">13</div><div class="kpi-sub">Borderline confidence (70–75%)</div></div>
+    <div class="kpi green"><div class="kpi-label">Avg Queue Age</div><div class="kpi-value">3.2d</div><div class="kpi-sub">Days in queue</div></div>
+  </div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Review Queue by Priority</div>
+      <div class="chart-sub">Invoice + CV documents</div>
+      <div class="chart-wrap"><canvas id="queuePriorityChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Review Triggers</div>
+      <div class="chart-sub">Why documents were flagged</div>
+      <div class="chart-wrap"><canvas id="reviewTriggerChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Invoice review queue -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3>⚠ Invoice Review Queue</h3>
+      <span class="table-count">25 items</span>
+    </div>
+    <table>
+      <thead><tr><th>Document ID</th><th>Vendor</th><th>Country</th><th>Total</th><th>Confidence</th><th>Low-Conf Fields</th><th>Days Pending</th><th>Priority</th></tr></thead>
+      <tbody id="invReviewTable"></tbody>
+    </table>
+  </div>
+
+  <!-- CV review queue -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3>⚠ Candidate Review Queue</h3>
+      <span class="table-count">3 items</span>
+    </div>
+    <table>
+      <thead><tr><th>Name</th><th>Role</th><th>Country</th><th>Confidence</th><th>Eligibility</th><th>Risk Flags</th><th>Priority</th><th>Improvements</th></tr></thead>
+      <tbody id="cvReviewTable"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 5 — GDPR / COMPLIANCE
+════════════════════════════════════════════════════════════════ -->
+<section class="section" id="tab-gdpr">
+  <h2 class="section-title">GDPR / DSGVO Compliance</h2>
+  <p class="section-desc">DSGVO (DE) · DSG 2018 (AT) · revDSG/nDSG (CH since 01.09.2023)</p>
+
+  <div class="gdpr-grid">
+    <div class="gdpr-card">
+      <div class="gdpr-icon">✅</div>
+      <div class="gdpr-title">Consent Records</div>
+      <div class="gdpr-value" style="color:var(--green)">78</div>
+      <div class="gdpr-detail">Active: 72 · Withdrawn: 6<br>Legal basis: Art. 6(1)(b) + (a)</div>
+    </div>
+    <div class="gdpr-card">
+      <div class="gdpr-icon">📋</div>
+      <div class="gdpr-title">Data Subject Requests</div>
+      <div class="gdpr-value" style="color:var(--accent)">15</div>
+      <div class="gdpr-detail">Completed: 8 · In progress: 5<br>⚠ Overdue: 2 (>30 days)</div>
+    </div>
+    <div class="gdpr-card">
+      <div class="gdpr-icon">🗑️</div>
+      <div class="gdpr-title">Erasure Requests (Art. 17)</div>
+      <div class="gdpr-value" style="color:var(--red)">6</div>
+      <div class="gdpr-detail">Executed: 5 · Pending: 1<br>Blobs deleted + DB anonymised</div>
+    </div>
+    <div class="gdpr-card">
+      <div class="gdpr-icon">🔒</div>
+      <div class="gdpr-title">PII Masked Records</div>
+      <div class="gdpr-value" style="color:var(--teal)">12</div>
+      <div class="gdpr-detail">Pseudonymised: 10<br>Anonymised: 2</div>
+    </div>
+    <div class="gdpr-card">
+      <div class="gdpr-icon">📅</div>
+      <div class="gdpr-title">Expiring in 90 Days</div>
+      <div class="gdpr-value" style="color:var(--yellow)">8</div>
+      <div class="gdpr-detail">Invoices: 5 (HGB §257)<br>CVs: 3 (365-day retention)</div>
+    </div>
+    <div class="gdpr-card">
+      <div class="gdpr-icon">📜</div>
+      <div class="gdpr-title">Audit Log Entries</div>
+      <div class="gdpr-value" style="color:var(--purple)">100</div>
+      <div class="gdpr-detail">Retained: 10 years (Art. 5(2))<br>All operations logged</div>
+    </div>
+    <div class="gdpr-card">
+      <div class="gdpr-icon">📤</div>
+      <div class="gdpr-title">Data Export Requests</div>
+      <div class="gdpr-value" style="color:var(--accent)">4</div>
+      <div class="gdpr-detail">Art. 15 + Art. 20<br>JSON exports with checksum</div>
+    </div>
+    <div class="gdpr-card">
+      <div class="gdpr-icon">⚠️</div>
+      <div class="gdpr-title">Overdue DSRs</div>
+      <div class="gdpr-value" style="color:var(--red)">2</div>
+      <div class="gdpr-detail">Art. 12(3): 30-day deadline<br>Immediate action required</div>
+    </div>
+  </div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">DSR Status Breakdown</div>
+      <div class="chart-sub">Art. 12(3) — 30-day response obligation</div>
+      <div class="chart-wrap"><canvas id="dsrStatusChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Audit Actions (Last 30 Days)</div>
+      <div class="chart-sub">All operations logged — Art. 5(2) accountability</div>
+      <div class="chart-wrap"><canvas id="auditActionChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">DSR by Request Type</div>
+      <div class="chart-sub">Rights exercised under GDPR Chapter III</div>
+      <div class="chart-wrap"><canvas id="dsrTypeChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Retention Schedule</div>
+      <div class="chart-sub">Documents by retention regime</div>
+      <div class="chart-wrap"><canvas id="retentionChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- DSR table -->
+  <div class="table-card">
+    <div class="table-header">
+      <h3>Data Subject Requests</h3>
+      <span class="table-count">15 total</span>
+    </div>
+    <table>
+      <thead><tr><th>DSR ID</th><th>Type</th><th>Received</th><th>Deadline</th><th>Days to Deadline</th><th>Status</th></tr></thead>
+      <tbody id="dsrTable"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB 6 — ANOMALIES
+════════════════════════════════════════════════════════════════ -->
+<section class="section" id="tab-anomalies">
+  <h2 class="section-title">Anomalies & Error View</h2>
+  <p class="section-desc">Documents requiring attention — validation failures, low confidence, IBAN errors, missing fields</p>
+
+  <div class="anomaly-grid">
+    <div class="anomaly-card error">
+      <div class="anomaly-count" style="color:var(--red)">4</div>
+      <div class="anomaly-title">Critical: Confidence &lt; 60%</div>
+      <div class="anomaly-body">Invoices with extremely low extraction confidence. Likely poor scan quality or unsupported layout. Manual re-upload recommended.</div>
+    </div>
+    <div class="anomaly-card warn">
+      <div class="anomaly-count" style="color:var(--yellow)">21</div>
+      <div class="anomaly-title">Warning: Confidence 60–75%</div>
+      <div class="anomaly-body">Documents where key fields fell below threshold. Routed to manual review queue. Reviewer action required within 2 business days.</div>
+    </div>
+    <div class="anomaly-card warn">
+      <div class="anomaly-count" style="color:var(--yellow)">3</div>
+      <div class="anomaly-title">Warning: Amount Inconsistency</div>
+      <div class="anomaly-body">Net + VAT ≠ Total (difference &gt;€0.05). Possible OCR error or rounding issue. Cross-check with original invoice PDF.</div>
+    </div>
+    <div class="anomaly-card error">
+      <div class="anomaly-count" style="color:var(--red)">2</div>
+      <div class="anomaly-title">Error: IBAN Checksum Failure</div>
+      <div class="anomaly-body">IBAN extracted from invoice failed ISO 7064 mod-97 validation. Do not process payment until IBAN is manually verified against original document.</div>
+    </div>
+    <div class="anomaly-card info">
+      <div class="anomaly-count" style="color:var(--accent)">5</div>
+      <div class="anomaly-title">Info: Non-standard VAT Rate</div>
+      <div class="anomaly-body">VAT rate detected outside standard DACH rates (DE:19/7%, AT:20/10%, CH:8.1/2.6%). Verify if zero-rated, exempt, or cross-border supply.</div>
+    </div>
+    <div class="anomaly-card warn">
+      <div class="anomaly-count" style="color:var(--orange)">5</div>
+      <div class="anomaly-title">Warning: Permit Required (CVs)</div>
+      <div class="anomaly-body">5 candidates classified as requiring work permit in DACH. This is informational only — always verify with qualified immigration counsel. Not a basis for automatic rejection.</div>
+    </div>
+    <div class="anomaly-card error">
+      <div class="anomaly-count" style="color:var(--red)">2</div>
+      <div class="anomaly-title">Critical: Overdue DSRs</div>
+      <div class="anomaly-body">2 data subject requests have exceeded the 30-day response deadline (GDPR Art. 12(3)). Regulatory risk — contact Data Protection Officer immediately.</div>
+    </div>
+    <div class="anomaly-card info">
+      <div class="anomaly-count" style="color:var(--teal)">8</div>
+      <div class="anomaly-title">Info: Expiring Retention</div>
+      <div class="anomaly-body">8 documents expire within 90 days per their retention schedule (HGB §257 / OR Art. 958f). Auto-deletion is configured. Review if any must be retained longer for legal hold.</div>
+    </div>
+  </div>
+
+  <div class="chart-grid-2">
+    <div class="chart-card">
+      <div class="chart-title">Anomaly Type Distribution</div>
+      <div class="chart-sub">All flagged issues</div>
+      <div class="chart-wrap"><canvas id="anomalyChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Error Rate by Country</div>
+      <div class="chart-sub">% of documents flagged per region</div>
+      <div class="chart-wrap"><canvas id="errorCountryChart"></canvas></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  DACH IDP Platform v2.0.0 · Portfolio Project · Azure AI Engineer (AI-102) ·
+  GDPR/DSGVO Compliant · DE · AT · CH · EUR · CHF · DE / EN / FR / IT ·
+  Built by Muhammad Umer
+</footer>
+
+<script>
+// ──────────────────────────────────────────────────────────────────────
+// Embedded mock data (generated by scripts/generate_mock_data.py)
+// ──────────────────────────────────────────────────────────────────────
+
+const VENDORS = [
+  {name:"Müller & Partner GmbH",country:"DE",currency:"EUR",count:8,total:82430,confidence:0.91,reviewRate:0.12},
+  {name:"Zürich Data Solutions AG",country:"CH",currency:"CHF",count:7,total:18750,confidence:0.93,reviewRate:0.14},
+  {name:"Bosch Rexroth AG",country:"DE",currency:"EUR",count:7,total:95200,confidence:0.88,reviewRate:0.29},
+  {name:"Wien Tech Consulting KG",country:"AT",currency:"EUR",count:6,total:41600,confidence:0.86,reviewRate:0.33},
+  {name:"Raiffeisen Software GmbH",country:"AT",currency:"EUR",count:6,total:38900,confidence:0.79,reviewRate:0.33},
+  {name:"UBS Business Solutions AG",country:"CH",currency:"CHF",count:5,total:21430,confidence:0.95,reviewRate:0.00},
+  {name:"Siemens Digital Industries",country:"DE",currency:"EUR",count:5,total:53100,confidence:0.87,reviewRate:0.20},
+  {name:"Deutsche Telekom IT GmbH",country:"DE",currency:"EUR",count:4,total:42300,confidence:0.84,reviewRate:0.25},
+];
+
+const CANDIDATES = [
+  {name:"Maximilian Schneider",role:"engineering",country:"DE",lang:"de",yoe:8.5,german:"Native",ats:65.0,eligibility:"eu_eea_citizen",improvements:1,review:false,confidence:0.94},
+  {name:"Sophie Keller",role:"finance",country:"CH",lang:"de",yoe:6.0,german:"Native",ats:28.0,eligibility:"swiss_citizen",improvements:1,review:false,confidence:0.95},
+  {name:"Amara Diallo",role:"data_science",country:"DE",lang:"en",yoe:4.5,german:"B2",ats:50.0,eligibility:"work_permit_required",improvements:3,review:false,confidence:0.91},
+  {name:"Laura Gruber",role:"hr",country:"AT",lang:"de",yoe:2.5,german:"Native",ats:8.0,eligibility:"eu_eea_citizen",improvements:2,review:false,confidence:0.84},
+  {name:"Thomas Maurer",role:"consulting",country:"CH",lang:"de",yoe:10.0,german:"Native",ats:18.0,eligibility:"swiss_citizen",improvements:1,review:false,confidence:0.92},
+  {name:"Maria Bianchi",role:"finance",country:"CH",lang:"it",yoe:5.0,german:"B1",ats:20.0,eligibility:"eu_eea_citizen",improvements:2,review:false,confidence:0.89},
+  {name:"Pierre Dupont",role:"consulting",country:"CH",lang:"fr",yoe:3.5,german:"A2",ats:15.0,eligibility:"eu_eea_citizen",improvements:3,review:true,confidence:0.80},
+  {name:"Lena Wagner",role:"engineering",country:"DE",lang:"de",yoe:5.0,german:"Native",ats:55.0,eligibility:"eu_eea_citizen",improvements:1,review:false,confidence:0.93},
+  {name:"Mehmet Yilmaz",role:"consulting",country:"DE",lang:"de",yoe:7.0,german:"C1",ats:14.0,eligibility:"work_permit_required",improvements:2,review:true,confidence:0.82},
+  {name:"Anna Hofer",role:"data_science",country:"AT",lang:"de",yoe:3.0,german:"Native",ats:30.0,eligibility:"eu_eea_citizen",improvements:2,review:false,confidence:0.87},
+  {name:"Lukas Brunner",role:"finance",country:"CH",lang:"de",yoe:8.0,german:"Native",ats:22.0,eligibility:"swiss_citizen",improvements:1,review:false,confidence:0.94},
+  {name:"Priya Sharma",role:"engineering",country:"DE",lang:"en",yoe:6.0,german:"A1",ats:18.0,eligibility:"work_permit_required",improvements:4,review:true,confidence:0.79},
+  {name:"Claudia Meier",role:"hr",country:"AT",lang:"de",yoe:9.0,german:"Native",ats:5.0,eligibility:"eu_eea_citizen",improvements:1,review:false,confidence:0.93},
+  {name:"Jan de Vries",role:"management",country:"DE",lang:"en",yoe:5.5,german:"B1",ats:14.0,eligibility:"eu_eea_citizen",improvements:2,review:false,confidence:0.88},
+  {name:"Fatima Al-Hassan",role:"data_science",country:"CH",lang:"en",yoe:2.0,german:"A2",ats:12.0,eligibility:"work_permit_required",improvements:4,review:false,confidence:0.85},
+  {name:"Stefan Bauer",role:"engineering",country:"DE",lang:"de",yoe:12.0,german:"Native",ats:60.0,eligibility:"eu_eea_citizen",improvements:0,review:false,confidence:0.96},
+  {name:"Elena Fontana",role:"management",country:"OTHER",lang:"it",yoe:7.0,german:"B2",ats:5.0,eligibility:"eu_eea_citizen",improvements:2,review:false,confidence:0.86},
+  {name:"David Müller",role:"finance",country:"DE",lang:"de",yoe:6.5,german:"Native",ats:10.0,eligibility:"eu_eea_citizen",improvements:1,review:false,confidence:0.91},
+  {name:"Isabelle Blanc",role:"management",country:"OTHER",lang:"fr",yoe:4.0,german:"B2",ats:3.0,eligibility:"eu_eea_citizen",improvements:2,review:false,confidence:0.83},
+  {name:"Ravi Patel",role:"data_science",country:"AT",lang:"en",yoe:5.0,german:"A1",ats:35.0,eligibility:"work_permit_required",improvements:3,review:false,confidence:0.85},
+];
+
+const DSR_DATA = [
+  {id:"dsr-a1b2c3d4e5",type:"erasure",received:"2024-10-01",deadline:"2024-10-31",days:-200,status:"completed"},
+  {id:"dsr-b2c3d4e5f6",type:"access",received:"2024-11-15",deadline:"2024-12-15",days:-150,status:"completed"},
+  {id:"dsr-c3d4e5f6g7",type:"portability",received:"2025-01-10",deadline:"2025-02-09",days:-90,status:"completed"},
+  {id:"dsr-d4e5f6g7h8",type:"rectification",received:"2025-02-20",deadline:"2025-03-22",days:-60,status:"completed"},
+  {id:"dsr-e5f6g7h8i9",type:"objection",received:"2025-03-01",deadline:"2025-03-31",days:-50,status:"completed"},
+  {id:"dsr-f6g7h8i9j0",type:"access",received:"2025-03-15",deadline:"2025-04-14",days:-30,status:"completed"},
+  {id:"dsr-g7h8i9j0k1",type:"erasure",received:"2025-04-01",deadline:"2025-05-01",days:-10,status:"completed"},
+  {id:"dsr-h8i9j0k1l2",type:"access",received:"2025-04-10",deadline:"2025-05-10",days:-1,status:"completed"},
+  {id:"dsr-i9j0k1l2m3",type:"restriction",received:"2025-04-15",deadline:"2025-05-15",days:4,status:"in_progress"},
+  {id:"dsr-j0k1l2m3n4",type:"portability",received:"2025-04-18",deadline:"2025-05-18",days:7,status:"in_progress"},
+  {id:"dsr-k1l2m3n4o5",type:"objection",received:"2025-04-22",deadline:"2025-05-22",days:11,status:"in_progress"},
+  {id:"dsr-l2m3n4o5p6",type:"erasure",received:"2025-04-25",deadline:"2025-05-25",days:14,status:"in_progress"},
+  {id:"dsr-m3n4o5p6q7",type:"access",received:"2025-04-28",deadline:"2025-05-28",days:17,status:"in_progress"},
+  {id:"dsr-n4o5p6q7r8",type:"rectification",received:"2025-03-05",deadline:"2025-04-04",days:-37,status:"overdue"},
+  {id:"dsr-o5p6q7r8s9",type:"access",received:"2025-03-10",deadline:"2025-04-09",days:-32,status:"overdue"},
+];
+
+// Chart.js defaults
+Chart.defaults.color = '#8892a4';
+Chart.defaults.borderColor = '#2d3251';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+Chart.defaults.font.size = 12;
+
+const C = {
+  blue:'#4f8ef7', purple:'#7c3aed', green:'#22c55e', yellow:'#f59e0b',
+  red:'#ef4444', orange:'#f97316', teal:'#14b8a6', pink:'#ec4899',
+  muted:'#8892a4'
+};
+
+function makeChart(id, type, labels, datasets, opts={}) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  return new Chart(ctx, {
+    type, data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: opts.legendPos || 'bottom', labels: { boxWidth: 10, padding: 12 } } },
+      ...opts.extra
+    }
+  });
+}
+
+function confColor(v) { return v >= 0.85 ? C.green : v >= 0.75 ? C.yellow : C.red; }
+function eligPill(e) {
+  if (e==='eu_eea_citizen') return `<span class="pill pill-blue">EU/EEA</span>`;
+  if (e==='swiss_citizen') return `<span class="pill pill-green">Swiss</span>`;
+  if (e==='work_permit_required') return `<span class="pill pill-orange">Permit Req.</span>`;
+  return `<span class="pill pill-gray">Unknown</span>`;
+}
+function rolePill(r) {
+  const map = {engineering:'blue',finance:'teal',data_science:'purple',consulting:'yellow',hr:'pink',management:'orange'};
+  return `<span class="pill pill-${map[r]||'gray'}">${r.replace('_',' ')}</span>`;
+}
+function germPill(g) {
+  const col = {Native:'green',C2:'green',C1:'blue',B2:'blue',B1:'yellow',A2:'yellow',A1:'red'}[g]||'gray';
+  return `<span class="pill pill-${col}">${g}</span>`;
+}
+function confBar(v) {
+  const c = confColor(v);
+  return `<div class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:${v*100}%;background:${c}"></div></div><span class="conf-label" style="color:${c}">${(v*100).toFixed(0)}%</span></div>`;
+}
+
+// ── TAB SWITCHING ──────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+  });
+});
+
+// ── DATE ──────────────────────────────────────────────────────
+document.getElementById('dateDisplay').textContent = new Date().toLocaleDateString('de-DE', {weekday:'short',year:'numeric',month:'short',day:'numeric'});
+
+// ═══════════════════════════════════════════════════════════
+// OVERVIEW CHARTS
+// ═══════════════════════════════════════════════════════════
+makeChart('monthlyChart','bar',
+  ['Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','Mai'],
+  [
+    {label:'Invoices',data:[3,5,4,6,7,5,8,7,6,8,5,6],backgroundColor:C.blue+'cc',borderRadius:4},
+    {label:'CVs',data:[1,2,1,2,2,1,3,2,2,1,2,1],backgroundColor:C.purple+'cc',borderRadius:4}
+  ],
+  {extra:{scales:{x:{stacked:false,grid:{display:false}},y:{stacked:false,grid:{color:'#2d325140'}}}}}
+);
+makeChart('countryChart','doughnut',
+  ['🇩🇪 Germany','🇦🇹 Austria','🇨🇭 Switzerland','Other'],
+  [{data:[38,18,18,6],backgroundColor:[C.blue,C.teal,C.red,C.muted],borderWidth:2,borderColor:'#1a1d27'}]
+);
+makeChart('statusChart','doughnut',
+  ['Complete','Manual Review','Processing','Failed'],
+  [{data:[49,28,2,1],backgroundColor:[C.green,C.yellow,C.blue,C.red],borderWidth:2,borderColor:'#1a1d27'}]
+);
+makeChart('langChart','doughnut',
+  ['🇩🇪 Deutsch','🇬🇧 English','🇫🇷 Français','🇮🇹 Italiano'],
+  [{data:[52,18,6,4],backgroundColor:[C.blue,C.orange,C.purple,C.teal],borderWidth:2,borderColor:'#1a1d27'}]
+);
+
+// ═══════════════════════════════════════════════════════════
+// INVOICE CHARTS
+// ═══════════════════════════════════════════════════════════
+makeChart('invCountryChart','bar',
+  ['🇩🇪 Germany','🇦🇹 Austria','🇨🇭 Switzerland'],
+  [{label:'Invoices',data:[30,15,15],backgroundColor:[C.blue,C.teal,C.red],borderRadius:6}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'}}}}}
+);
+makeChart('invVolumeChart','line',
+  ['Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','Mai'],
+  [
+    {label:'EUR (€)',data:[28000,42000,35000,51000,47000,39000,62000,55000,48000,61000,43000,50000],borderColor:C.blue,backgroundColor:C.blue+'20',fill:true,tension:0.4},
+    {label:'CHF',data:[5000,8000,6200,9100,7800,6500,11000,9800,8200,10500,7100,8900],borderColor:C.red,backgroundColor:C.red+'20',fill:true,tension:0.4}
+  ],
+  {extra:{scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'}}}}}
+);
+makeChart('invConfChart','bar',
+  ['&lt;60%','60–70%','70–80%','80–90%','90–100%'],
+  [{label:'Invoices',data:[4,8,13,22,13],backgroundColor:[C.red,C.orange,C.yellow,C.blue,C.green],borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'}}}}}
+);
+makeChart('vatChart','bar',
+  ['7% (DE)','8.1% (CH)','10% (AT)','19% (DE)','20% (AT)','2.6% (CH)'],
+  [{label:'Count',data:[4,12,5,26,10,3],backgroundColor:[C.teal,C.red,C.purple,C.blue,C.orange,C.pink],borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'}}}}}
+);
+
+// Vendor table
+const vTbody = document.getElementById('vendorTable');
+VENDORS.forEach(v => {
+  const revPill = v.reviewRate > 0.25 ? `<span class="pill pill-red">${(v.reviewRate*100).toFixed(0)}%</span>` : v.reviewRate > 0.15 ? `<span class="pill pill-yellow">${(v.reviewRate*100).toFixed(0)}%</span>` : `<span class="pill pill-green">${(v.reviewRate*100).toFixed(0)}%</span>`;
+  vTbody.innerHTML += `<tr>
+    <td><strong>${v.name}</strong></td>
+    <td>${v.country==='DE'?'🇩🇪':v.country==='AT'?'🇦🇹':'🇨🇭'} ${v.country}</td>
+    <td><span class="pill pill-blue">${v.currency}</span></td>
+    <td>${v.count}</td>
+    <td>${v.currency==='CHF'?'CHF':'€'} ${v.total.toLocaleString('de-DE')}</td>
+    <td>${confBar(v.confidence)}</td>
+    <td>${revPill}</td>
+  </tr>`;
+});
+
+// ═══════════════════════════════════════════════════════════
+// CV CHARTS + TABLE
+// ═══════════════════════════════════════════════════════════
+const roleColors = {engineering:C.blue,finance:C.teal,data_science:C.purple,consulting:C.yellow,hr:C.pink,management:C.orange};
+const roleCounts = {};
+CANDIDATES.forEach(c => { roleCounts[c.role] = (roleCounts[c.role]||0)+1; });
+makeChart('cvRoleChart','doughnut',
+  Object.keys(roleCounts).map(r => r.replace('_',' ')),
+  [{data:Object.values(roleCounts),backgroundColor:Object.keys(roleCounts).map(r=>roleColors[r]),borderWidth:2,borderColor:'#1a1d27'}]
+);
+
+const eligCounts = {eu_eea_citizen:0,swiss_citizen:0,work_permit_required:0};
+CANDIDATES.forEach(c => { eligCounts[c.eligibility] = (eligCounts[c.eligibility]||0)+1; });
+makeChart('cvEligChart','doughnut',
+  ['EU/EEA Citizen','Swiss Citizen','Permit Required'],
+  [{data:[eligCounts.eu_eea_citizen,eligCounts.swiss_citizen,eligCounts.work_permit_required],backgroundColor:[C.blue,C.green,C.orange],borderWidth:2,borderColor:'#1a1d27'}]
+);
+
+const atsBuckets = {'0–20':0,'20–40':0,'40–60':0,'60–80':0,'80–100':0};
+CANDIDATES.forEach(c => {
+  if (c.ats<20) atsBuckets['0–20']++;
+  else if (c.ats<40) atsBuckets['20–40']++;
+  else if (c.ats<60) atsBuckets['40–60']++;
+  else if (c.ats<80) atsBuckets['60–80']++;
+  else atsBuckets['80–100']++;
+});
+makeChart('atsDistChart','bar',
+  Object.keys(atsBuckets),
+  [{label:'Candidates',data:Object.values(atsBuckets),backgroundColor:[C.red,C.orange,C.yellow,C.blue,C.green],borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'},ticks:{stepSize:1}}}}}
+);
+
+const germanCounts = {};
+CANDIDATES.forEach(c => { germanCounts[c.german] = (germanCounts[c.german]||0)+1; });
+const gOrder = ['Native','C2','C1','B2','B1','A2','A1'];
+makeChart('germanLangChart','bar',
+  gOrder.filter(g => germanCounts[g]),
+  [{label:'Candidates',data:gOrder.filter(g=>germanCounts[g]).map(g=>germanCounts[g]),backgroundColor:gOrder.filter(g=>germanCounts[g]).map(g=>['Native','C2','C1'].includes(g)?C.green:['B2','B1'].includes(g)?C.yellow:C.red),borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'},ticks:{stepSize:1}}}}}
+);
+
+const countryCounts = {};
+CANDIDATES.forEach(c => { countryCounts[c.country] = (countryCounts[c.country]||0)+1; });
+makeChart('cvCountryChart','bar',
+  Object.keys(countryCounts).map(c=>({DE:'🇩🇪 Germany',AT:'🇦🇹 Austria',CH:'🇨🇭 Switzerland',OTHER:'🌍 Other'}[c]||c)),
+  [{label:'Candidates',data:Object.values(countryCounts),backgroundColor:[C.blue,C.teal,C.red,C.muted],borderRadius:6}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'},ticks:{stepSize:1}}}}}
+);
+
+// Missing skills
+const missingSkillFreq = {};
+const JD_KEYS = ['Kubernetes','Terraform','CI/CD','Machine Learning','Bloomberg','IFRS','Risk Management','SAP','Power BI','Scrum'];
+CANDIDATES.forEach(c => {
+  const skills = (c.missing||[]);
+  JD_KEYS.forEach(k => { if (!c.name.includes('Schneider') && !c.name.includes('Wagner') && !c.name.includes('Bauer')) missingSkillFreq[k] = (missingSkillFreq[k]||0)+1; });
+});
+const topMissing = JD_KEYS.map(k => ({k, v: missingSkillFreq[k]||Math.floor(Math.random()*8+2)})).sort((a,b)=>b.v-a.v);
+const msl = document.getElementById('missingSkillsList');
+const maxV = topMissing[0]?.v || 1;
+topMissing.forEach(({k,v}) => {
+  msl.innerHTML += `<div class="skill-row"><span class="skill-name">${k}</span><div class="skill-track"><div class="skill-fill" style="width:${v/maxV*100}%;background:${C.red}"></div></div><span class="skill-count">${v}</span></div>`;
+});
+
+// CV Table
+const cvBody = document.getElementById('cvTable');
+CANDIDATES.forEach(c => {
+  const reviewPill = c.review ? `<span class="pill pill-yellow">Review</span>` : `<span class="pill pill-green">Cleared</span>`;
+  cvBody.innerHTML += `<tr>
+    <td><strong>${c.name}</strong></td>
+    <td>${rolePill(c.role)}</td>
+    <td>${{DE:'🇩🇪',AT:'🇦🇹',CH:'🇨🇭',OTHER:'🌍'}[c.country]} ${c.country}</td>
+    <td>${c.yoe} yrs</td>
+    <td>${germPill(c.german)}</td>
+    <td><span style="font-weight:700;color:${c.ats>=50?C.green:c.ats>=25?C.yellow:C.red}">${c.ats}</span>/100</td>
+    <td>${eligPill(c.eligibility)}</td>
+    <td><span class="pill ${c.improvements>2?'pill-orange':'pill-blue'}">${c.improvements} tips</span></td>
+    <td>${reviewPill}</td>
+  </tr>`;
+});
+
+// ═══════════════════════════════════════════════════════════
+// REVIEW QUEUE
+// ═══════════════════════════════════════════════════════════
+makeChart('queuePriorityChart','doughnut',
+  ['High Priority','Medium Priority','Low Priority'],
+  [{data:[4,11,13],backgroundColor:[C.red,C.yellow,C.blue],borderWidth:2,borderColor:'#1a1d27'}]
+);
+makeChart('reviewTriggerChart','bar',
+  ['Confidence <60%','Confidence 60-75%','IBAN Error','Amt Inconsistency','Missing VAT','Unknown Eligibility','Other'],
+  [{label:'Documents',data:[4,21,2,3,3,2,2],backgroundColor:[C.red,C.yellow,C.orange,C.purple,C.teal,C.pink,C.muted],borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxRotation:30}},y:{grid:{color:'#2d325140'}}}}}
+);
+
+// Invoice review table (sample)
+const invRT = document.getElementById('invReviewTable');
+const invReviewSamples = [
+  {id:'inv-a1b2c3','vendor':'Müller & Partner GmbH','country':'DE','total':'€ 4,230','conf':0.58,'fields':'vendor_name, invoice_date','days':5,'priority':'High'},
+  {id:'inv-b2c3d4','vendor':'Wien Tech Consulting KG','country':'AT','total':'€ 8,750','conf':0.64,'fields':'total_gross, vat_amount','days':3,'priority':'Medium'},
+  {id:'inv-c3d4e5','vendor':'Bosch Rexroth AG','country':'DE','total':'€ 12,400','conf':0.71,'fields':'invoice_date','days':1,'priority':'Low'},
+  {id:'inv-d4e5f6','vendor':'Raiffeisen Software GmbH','country':'AT','total':'€ 6,100','conf':0.62,'fields':'vendor_iban, invoice_number','days':8,'priority':'High'},
+  {id:'inv-e5f6g7','vendor':'Siemens Digital Industries','country':'DE','total':'€ 9,800','conf':0.69,'fields':'due_date','days':2,'priority':'Medium'},
+];
+invReviewSamples.forEach(r => {
+  const pCol = r.priority==='High'?'red':r.priority==='Medium'?'yellow':'blue';
+  invRT.innerHTML += `<tr>
+    <td><code>${r.id}</code></td><td>${r.vendor}</td>
+    <td>${r.country==='DE'?'🇩🇪':r.country==='AT'?'🇦🇹':'🇨🇭'} ${r.country}</td>
+    <td>${r.total}</td><td>${confBar(r.conf)}</td>
+    <td><span style="color:var(--yellow);font-size:11px">${r.fields}</span></td>
+    <td>${r.days}d</td><td><span class="pill pill-${pCol}">${r.priority}</span></td>
+  </tr>`;
+});
+
+// CV review table
+const cvRT = document.getElementById('cvReviewTable');
+[{name:'Pierre Dupont',role:'consulting',country:'CH',conf:0.80,elig:'eu_eea_citizen',flags:'low_confidence',priority:'Medium',improvements:3},
+ {name:'Mehmet Yilmaz',role:'consulting',country:'DE',conf:0.82,elig:'work_permit_required',flags:'work_permit_required',priority:'High',improvements:2},
+ {name:'Priya Sharma',role:'engineering',country:'DE',conf:0.79,elig:'work_permit_required',flags:'work_permit_required, low_confidence',priority:'High',improvements:4}
+].forEach(r => {
+  const pCol = r.priority==='High'?'red':'yellow';
+  cvRT.innerHTML += `<tr>
+    <td><strong>${r.name}</strong></td><td>${rolePill(r.role)}</td>
+    <td>${r.country==='DE'?'🇩🇪':r.country==='AT'?'🇦🇹':'🇨🇭'} ${r.country}</td>
+    <td>${confBar(r.conf)}</td><td>${eligPill(r.elig)}</td>
+    <td><span style="color:var(--yellow);font-size:11px">${r.flags}</span></td>
+    <td><span class="pill pill-${pCol}">${r.priority}</span></td>
+    <td><span class="pill pill-orange">${r.improvements} tips</span></td>
+  </tr>`;
+});
+
+// ═══════════════════════════════════════════════════════════
+// GDPR CHARTS
+// ═══════════════════════════════════════════════════════════
+const dsrStatus = {completed:8,in_progress:5,overdue:2};
+makeChart('dsrStatusChart','doughnut',
+  ['Completed','In Progress','Overdue'],
+  [{data:Object.values(dsrStatus),backgroundColor:[C.green,C.blue,C.red],borderWidth:2,borderColor:'#1a1d27'}]
+);
+makeChart('auditActionChart','bar',
+  ['upload','extract','view','consent_grant','dsr_received','mask_pii','delete','export'],
+  [{label:'Actions',data:[22,22,18,10,6,8,5,4],backgroundColor:C.accent,borderRadius:4}].map(d=>({...d,backgroundColor:[C.blue,C.teal,C.muted,C.green,C.orange,C.purple,C.red,C.yellow]})),
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxRotation:30}},y:{grid:{color:'#2d325140'}}}}}
+);
+makeChart('dsrTypeChart','doughnut',
+  ['Access','Erasure','Portability','Rectification','Objection','Restriction'],
+  [{data:[5,3,2,2,2,1],backgroundColor:[C.blue,C.red,C.teal,C.yellow,C.orange,C.purple],borderWidth:2,borderColor:'#1a1d27'}]
+);
+makeChart('retentionChart','bar',
+  ['HGB §257\n10yr (DE)','OR Art.958f\n10yr (CH)','UGB\n7yr (AT)','GDPR Consent\nOngoing','CV\n1yr'],
+  [{label:'Documents',data:[24,12,10,22,20],backgroundColor:[C.blue,C.red,C.teal,C.green,C.purple],borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'}}}}}
+);
+
+// DSR table
+const dsrTbody = document.getElementById('dsrTable');
+DSR_DATA.forEach(d => {
+  const statusPill = d.status==='completed'?'<span class="pill pill-green">Completed</span>':d.status==='overdue'?'<span class="pill pill-red">⚠ Overdue</span>':'<span class="pill pill-yellow">In Progress</span>';
+  const daysCell = d.days < 0 ? `<span style="color:var(--muted)">${Math.abs(d.days)}d ago</span>` : d.days < 7 ? `<span style="color:var(--yellow)">+${d.days}d</span>` : `<span style="color:var(--green)">+${d.days}d</span>`;
+  dsrTbody.innerHTML += `<tr><td><code>${d.id}</code></td><td><span class="pill pill-blue">${d.type}</span></td><td>${d.received}</td><td>${d.deadline}</td><td>${daysCell}</td><td>${statusPill}</td></tr>`;
+});
+
+// ═══════════════════════════════════════════════════════════
+// ANOMALY CHARTS
+// ═══════════════════════════════════════════════════════════
+makeChart('anomalyChart','doughnut',
+  ['Confidence <60%','Confidence 60-75%','Amt Inconsistency','IBAN Error','Non-std VAT','Permit Required','Overdue DSR','Expiring Retention'],
+  [{data:[4,21,3,2,5,5,2,8],backgroundColor:[C.red,C.yellow,C.purple,C.orange,C.teal,C.pink,C.red,C.blue],borderWidth:2,borderColor:'#1a1d27'}]
+);
+makeChart('errorCountryChart','bar',
+  ['🇩🇪 Germany','🇦🇹 Austria','🇨🇭 Switzerland'],
+  [{label:'Error Rate %',data:[38,47,27],backgroundColor:[C.blue,C.teal,C.red],borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'},ticks:{callback:v=>v+'%'},max:60}}}}
+);
+</script>
+</body>
+</html>
