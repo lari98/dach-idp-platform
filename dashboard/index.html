@@ -175,6 +175,7 @@
   <div class="tab active" data-tab="overview">📊 Overview</div>
   <div class="tab" data-tab="invoices">🧾 Invoices</div>
   <div class="tab" data-tab="cvs">👤 Candidates / CVs</div>
+  <div class="tab" data-tab="ats">🎯 ATS Engine</div>
   <div class="tab" data-tab="review">⚠️ Review Queue</div>
   <div class="tab" data-tab="gdpr">🔒 GDPR / Compliance</div>
   <div class="tab" data-tab="anomalies">🚨 Anomalies</div>
@@ -442,6 +443,120 @@
     <table>
       <thead><tr><th>Name</th><th>Role</th><th>Country</th><th>Experience</th><th>German</th><th>ATS Score</th><th>Eligibility</th><th>Improvements</th><th>Status</th></tr></thead>
       <tbody id="cvTable"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TAB ATS — ATS ENGINE
+════════════════════════════════════════════════════════════════ -->
+<section class="section" id="tab-ats">
+  <h2 class="section-title">🎯 Enterprise ATS Engine</h2>
+  <p class="section-desc">Multilingual Applicant Tracking System — DE · EN · FR · SV &nbsp;|&nbsp; Deloitte · KPMG · Deutsche Bank · Six Group · Accenture · Sparkasse · PwC · Nordea</p>
+
+  <!-- KPIs -->
+  <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));margin-bottom:24px">
+    <div class="kpi blue"><div class="kpi-label">Active Job Postings</div><div class="kpi-value">8</div><div class="kpi-sub">DE · CH · AT · SE</div></div>
+    <div class="kpi green"><div class="kpi-label">CVs Scored</div><div class="kpi-value">320</div><div class="kpi-sub">Last 30 days</div></div>
+    <div class="kpi yellow"><div class="kpi-label">Shortlisted</div><div class="kpi-value">74</div><div class="kpi-sub">Score ≥ 65/100</div></div>
+    <div class="kpi red"><div class="kpi-label">Auto-Rejected</div><div class="kpi-value">58</div><div class="kpi-sub">Hard req. failed</div></div>
+    <div class="kpi purple"><div class="kpi-label">Avg ATS Score</div><div class="kpi-value">61.4</div><div class="kpi-sub">Across all matches</div></div>
+    <div class="kpi teal"><div class="kpi-label">Avg Time-to-Screen</div><div class="kpi-value">1.2s</div><div class="kpi-sub">Per CV (AI scoring)</div></div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="chart-grid" style="grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px">
+    <div class="chart-card">
+      <div class="chart-title">ATS Score Distribution</div>
+      <div class="chart-sub">All candidates across all jobs</div>
+      <canvas id="atsScoreDistChart" height="180"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Recommendation Breakdown</div>
+      <div class="chart-sub">Strong Match → No Match</div>
+      <canvas id="atsRecoChart" height="180"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">JD Language Distribution</div>
+      <div class="chart-sub">Job postings by language</div>
+      <canvas id="atsLangChart" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- Active Job Requisitions -->
+  <div class="table-card" style="margin-bottom:24px">
+    <div class="table-title">Active Job Requisitions</div>
+    <div style="overflow-x:auto">
+      <table class="data-table">
+        <thead><tr>
+          <th>Job ID</th><th>Title</th><th>Employer</th><th>Location</th>
+          <th>Seniority</th><th>Languages</th><th>Exp (yrs)</th>
+          <th>Applications</th><th>Shortlisted</th><th>Status</th>
+        </tr></thead>
+        <tbody id="atsJobsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Candidate Rankings per Job -->
+  <div class="chart-grid" style="grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+    <div class="table-card">
+      <div class="table-title">Top Candidates — Deloitte Senior Consultant (JR-DEL-001)</div>
+      <table class="data-table">
+        <thead><tr><th>Rank</th><th>Profile</th><th>ATS Score</th><th>Matched Skills</th><th>Missing</th><th>Recommendation</th></tr></thead>
+        <tbody>
+          <tr><td>#1</td><td>DE Engineer, 8yr</td><td><span style="color:var(--green);font-weight:700">84.2</span></td><td>consulting, project_mgmt, comm, leadership</td><td>—</td><td><span class="pill pill-green">STRONG</span></td></tr>
+          <tr><td>#2</td><td>CH Finance, 6yr</td><td><span style="color:var(--blue);font-weight:700">71.5</span></td><td>consulting, accounting, risk_mgmt</td><td>agile</td><td><span class="pill pill-blue">GOOD</span></td></tr>
+          <tr><td>#3</td><td>AT HR, 4yr</td><td><span style="color:var(--yellow);font-weight:700">52.0</span></td><td>communication, hr</td><td>consulting, project_mgmt</td><td><span class="pill pill-yellow">POSSIBLE</span></td></tr>
+          <tr><td>#4</td><td>SN Data Sci, 3yr</td><td><span style="color:var(--orange);font-weight:700">38.7</span></td><td>python, data_analysis</td><td>consulting, german_lang</td><td><span class="pill pill-orange">WEAK</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="table-card">
+      <div class="table-title">Top Missing Skills Across All Jobs</div>
+      <table class="data-table">
+        <thead><tr><th>Skill</th><th>Jobs Requiring</th><th>Candidate Gap %</th><th>Severity</th></tr></thead>
+        <tbody>
+          <tr><td>German C1+ (german_language)</td><td>6</td><td>42%</td><td><span class="pill pill-red">High</span></td></tr>
+          <tr><td>Risk Management</td><td>5</td><td>38%</td><td><span class="pill pill-red">High</span></td></tr>
+          <tr><td>SAP (FI/CO/HCM)</td><td>3</td><td>61%</td><td><span class="pill pill-red">High</span></td></tr>
+          <tr><td>Compliance / MiFID</td><td>4</td><td>55%</td><td><span class="pill pill-orange">Med</span></td></tr>
+          <tr><td>Agile / Scrum</td><td>4</td><td>30%</td><td><span class="pill pill-orange">Med</span></td></tr>
+          <tr><td>French C1+ (french_language)</td><td>2</td><td>75%</td><td><span class="pill pill-orange">Med</span></td></tr>
+          <tr><td>CPA / WP Certification</td><td>2</td><td>68%</td><td><span class="pill pill-yellow">Low-Med</span></td></tr>
+          <tr><td>Swedish C2 (swedish_language)</td><td>1</td><td>90%</td><td><span class="pill pill-yellow">Low-Med</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Candidate Pipeline Funnel -->
+  <div class="chart-grid" style="grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px">
+    <div class="chart-card">
+      <div class="chart-title">Candidate Pipeline Funnel — All Jobs</div>
+      <div class="chart-sub">Applied → Screened → Interview → Offer → Hired</div>
+      <canvas id="atsFunnelChart" height="160"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Scoring Weights</div>
+      <div class="chart-sub">Enterprise ATS formula (mirrors Taleo / Workday)</div>
+      <canvas id="atsWeightsChart" height="160"></canvas>
+    </div>
+  </div>
+
+  <!-- Hard Requirement Outcomes -->
+  <div class="table-card">
+    <div class="table-title">Hard Requirement Check Results (Last 30 Days)</div>
+    <table class="data-table">
+      <thead><tr><th>Requirement</th><th>Job</th><th>Checked</th><th>Passed</th><th>Failed</th><th>Unknown</th><th>Pass Rate</th></tr></thead>
+      <tbody>
+        <tr><td>Min 5yr Experience</td><td>Deloitte / KPMG / PwC</td><td>89</td><td>61</td><td>21</td><td>7</td><td><span style="color:var(--green)">68.5%</span></td></tr>
+        <tr><td>German C1+ Language</td><td>Deloitte / Accenture / Sparkasse</td><td>134</td><td>79</td><td>38</td><td>17</td><td><span style="color:var(--yellow)">59.0%</span></td></tr>
+        <tr><td>EU/EEA Work Authorisation</td><td>All DE/AT jobs</td><td>210</td><td>178</td><td>14</td><td>18</td><td><span style="color:var(--green)">84.8%</span></td></tr>
+        <tr><td>CPA / WP Certification</td><td>KPMG / PwC</td><td>52</td><td>21</td><td>31</td><td>0</td><td><span style="color:var(--red)">40.4%</span></td></tr>
+        <tr><td>French C1+ Language</td><td>PwC Genf</td><td>31</td><td>12</td><td>11</td><td>8</td><td><span style="color:var(--orange)">38.7%</span></td></tr>
+        <tr><td>Swedish C2 Language</td><td>Nordea Stockholm</td><td>24</td><td>9</td><td>13</td><td>2</td><td><span style="color:var(--red)">37.5%</span></td></tr>
+      </tbody>
     </table>
   </div>
 </section>
@@ -769,6 +884,58 @@ function confBar(v) {
   return `<div class="conf-bar"><div class="conf-track"><div class="conf-fill" style="width:${v*100}%;background:${c}"></div></div><span class="conf-label" style="color:${c}">${(v*100).toFixed(0)}%</span></div>`;
 }
 
+// ═══════════════════════════════════════════════════════════
+// ATS CHARTS + TABLE
+// ═══════════════════════════════════════════════════════════
+makeChart('atsScoreDistChart','bar',
+  ['0–20','21–40','41–60','61–80','81–100'],
+  [{label:'Candidates',data:[58,62,89,74,37],backgroundColor:[C.red,C.orange,C.yellow,C.blue,C.green],borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'}}}}}
+);
+makeChart('atsRecoChart','doughnut',
+  ['Strong Match','Good Match','Possible','Weak','No Match'],
+  [{data:[37,37,89,99,58],backgroundColor:[C.green,C.blue,C.yellow,C.orange,C.red],borderWidth:2,borderColor:'#1a1d27'}]
+);
+makeChart('atsLangChart','doughnut',
+  ['🇩🇪 Deutsch','🇬🇧 English','🇫🇷 Français','🇸🇪 Svenska'],
+  [{data:[4,3,1,1],backgroundColor:[C.blue,C.orange,C.purple,C.teal],borderWidth:2,borderColor:'#1a1d27'}]
+);
+makeChart('atsFunnelChart','bar',
+  ['Applied','AI Screened','Phone Interview','Technical','Final','Offer','Hired'],
+  [{label:'Candidates',data:[320,190,74,42,21,11,6],backgroundColor:C.blue+'cc',borderRadius:4}],
+  {extra:{indexAxis:'y',scales:{x:{grid:{color:'#2d325140'}},y:{grid:{display:false}}}}}
+);
+makeChart('atsWeightsChart','doughnut',
+  ['Skills (35%)','Experience (20%)','Education (15%)','Languages (15%)','Soft Skills (10%)','Location (5%)'],
+  [{data:[35,20,15,15,10,5],backgroundColor:[C.blue,C.green,C.purple,C.teal,C.orange,C.red],borderWidth:2,borderColor:'#1a1d27'}]
+);
+
+// ATS Jobs table
+const atsJobs = [
+  {id:'JR-DEL-001',title:'Senior Consultant Strategy',employer:'Deloitte Deutschland',loc:'Frankfurt, DE',sen:'Senior',langs:'DE C1, EN B2',exp:'5+',apps:47,short:14},
+  {id:'JR-KPM-001',title:'Manager Wirtschaftsprüfung',employer:'KPMG AG',loc:'München, DE',sen:'Manager',langs:'DE C1, EN C1',exp:'6+',apps:31,short:8},
+  {id:'JR-DB-001',title:'Risk Analyst Market & Credit',employer:'Deutsche Bank AG',loc:'Frankfurt, DE',sen:'Mid',langs:'EN C1, DE B2',exp:'3+',apps:89,short:22},
+  {id:'JR-SIX-001',title:'Data Engineer — Fin Market',employer:'SIX Group AG',loc:'Zürich, CH',sen:'Senior',langs:'EN C1, DE B1',exp:'5+',apps:62,short:19},
+  {id:'JR-ACC-001',title:'SAP S/4HANA Berater Finance',employer:'Accenture GmbH',loc:'Berlin, DE',sen:'Mid',langs:'DE C2, EN B2',exp:'3+',apps:55,short:11},
+  {id:'JR-SPK-001',title:'HR Manager / Personalreferent',employer:'Sparkasse Frankfurt',loc:'Frankfurt, DE',sen:'Mid',langs:'DE C2',exp:'3+',apps:28,short:7},
+  {id:'JR-PWC-001',title:'Conseiller Fiscal / Tax Advisor',employer:'PricewaterhouseCoopers SA',loc:'Genf, CH',sen:'Senior',langs:'FR C1, DE B2, EN B2',exp:'5+',apps:19,short:5},
+  {id:'JR-NOR-001',title:'IT-projektledare Digital Banking',employer:'Nordea Bank',loc:'Stockholm, SE',sen:'Senior',langs:'SV C2, EN C1',exp:'7+',apps:34,short:8},
+];
+const atsBody = document.getElementById('atsJobsBody');
+if(atsBody) atsBody.innerHTML = atsJobs.map(j=>`
+  <tr>
+    <td><code style="color:var(--accent);font-size:11px">${j.id}</code></td>
+    <td style="font-weight:500">${j.title}</td>
+    <td style="color:var(--muted);font-size:12px">${j.employer}</td>
+    <td style="font-size:12px">${j.loc}</td>
+    <td><span class="pill pill-blue">${j.sen}</span></td>
+    <td style="font-size:11px;color:var(--muted)">${j.langs}</td>
+    <td style="text-align:center">${j.exp}</td>
+    <td style="text-align:center;font-weight:600">${j.apps}</td>
+    <td style="text-align:center;color:var(--green);font-weight:600">${j.short}</td>
+    <td><span class="pill pill-green">Active</span></td>
+  </tr>`).join('');
+
 // ── TAB SWITCHING ──────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
@@ -848,179 +1015,4 @@ VENDORS.forEach(v => {
   </tr>`;
 });
 
-// ═══════════════════════════════════════════════════════════
-// CV CHARTS + TABLE
-// ═══════════════════════════════════════════════════════════
-const roleColors = {engineering:C.blue,finance:C.teal,data_science:C.purple,consulting:C.yellow,hr:C.pink,management:C.orange};
-const roleCounts = {};
-CANDIDATES.forEach(c => { roleCounts[c.role] = (roleCounts[c.role]||0)+1; });
-makeChart('cvRoleChart','doughnut',
-  Object.keys(roleCounts).map(r => r.replace('_',' ')),
-  [{data:Object.values(roleCounts),backgroundColor:Object.keys(roleCounts).map(r=>roleColors[r]),borderWidth:2,borderColor:'#1a1d27'}]
-);
-
-const eligCounts = {eu_eea_citizen:0,swiss_citizen:0,work_permit_required:0};
-CANDIDATES.forEach(c => { eligCounts[c.eligibility] = (eligCounts[c.eligibility]||0)+1; });
-makeChart('cvEligChart','doughnut',
-  ['EU/EEA Citizen','Swiss Citizen','Permit Required'],
-  [{data:[eligCounts.eu_eea_citizen,eligCounts.swiss_citizen,eligCounts.work_permit_required],backgroundColor:[C.blue,C.green,C.orange],borderWidth:2,borderColor:'#1a1d27'}]
-);
-
-const atsBuckets = {'0–20':0,'20–40':0,'40–60':0,'60–80':0,'80–100':0};
-CANDIDATES.forEach(c => {
-  if (c.ats<20) atsBuckets['0–20']++;
-  else if (c.ats<40) atsBuckets['20–40']++;
-  else if (c.ats<60) atsBuckets['40–60']++;
-  else if (c.ats<80) atsBuckets['60–80']++;
-  else atsBuckets['80–100']++;
-});
-makeChart('atsDistChart','bar',
-  Object.keys(atsBuckets),
-  [{label:'Candidates',data:Object.values(atsBuckets),backgroundColor:[C.red,C.orange,C.yellow,C.blue,C.green],borderRadius:4}],
-  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'},ticks:{stepSize:1}}}}}
-);
-
-const germanCounts = {};
-CANDIDATES.forEach(c => { germanCounts[c.german] = (germanCounts[c.german]||0)+1; });
-const gOrder = ['Native','C2','C1','B2','B1','A2','A1'];
-makeChart('germanLangChart','bar',
-  gOrder.filter(g => germanCounts[g]),
-  [{label:'Candidates',data:gOrder.filter(g=>germanCounts[g]).map(g=>germanCounts[g]),backgroundColor:gOrder.filter(g=>germanCounts[g]).map(g=>['Native','C2','C1'].includes(g)?C.green:['B2','B1'].includes(g)?C.yellow:C.red),borderRadius:4}],
-  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'},ticks:{stepSize:1}}}}}
-);
-
-const countryCounts = {};
-CANDIDATES.forEach(c => { countryCounts[c.country] = (countryCounts[c.country]||0)+1; });
-makeChart('cvCountryChart','bar',
-  Object.keys(countryCounts).map(c=>({DE:'🇩🇪 Germany',AT:'🇦🇹 Austria',CH:'🇨🇭 Switzerland',OTHER:'🌍 Other'}[c]||c)),
-  [{label:'Candidates',data:Object.values(countryCounts),backgroundColor:[C.blue,C.teal,C.red,C.muted],borderRadius:6}],
-  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'},ticks:{stepSize:1}}}}}
-);
-
-// Missing skills
-const missingSkillFreq = {};
-const JD_KEYS = ['Kubernetes','Terraform','CI/CD','Machine Learning','Bloomberg','IFRS','Risk Management','SAP','Power BI','Scrum'];
-CANDIDATES.forEach(c => {
-  const skills = (c.missing||[]);
-  JD_KEYS.forEach(k => { if (!c.name.includes('Schneider') && !c.name.includes('Wagner') && !c.name.includes('Bauer')) missingSkillFreq[k] = (missingSkillFreq[k]||0)+1; });
-});
-const topMissing = JD_KEYS.map(k => ({k, v: missingSkillFreq[k]||Math.floor(Math.random()*8+2)})).sort((a,b)=>b.v-a.v);
-const msl = document.getElementById('missingSkillsList');
-const maxV = topMissing[0]?.v || 1;
-topMissing.forEach(({k,v}) => {
-  msl.innerHTML += `<div class="skill-row"><span class="skill-name">${k}</span><div class="skill-track"><div class="skill-fill" style="width:${v/maxV*100}%;background:${C.red}"></div></div><span class="skill-count">${v}</span></div>`;
-});
-
-// CV Table
-const cvBody = document.getElementById('cvTable');
-CANDIDATES.forEach(c => {
-  const reviewPill = c.review ? `<span class="pill pill-yellow">Review</span>` : `<span class="pill pill-green">Cleared</span>`;
-  cvBody.innerHTML += `<tr>
-    <td><strong>${c.name}</strong></td>
-    <td>${rolePill(c.role)}</td>
-    <td>${{DE:'🇩🇪',AT:'🇦🇹',CH:'🇨🇭',OTHER:'🌍'}[c.country]} ${c.country}</td>
-    <td>${c.yoe} yrs</td>
-    <td>${germPill(c.german)}</td>
-    <td><span style="font-weight:700;color:${c.ats>=50?C.green:c.ats>=25?C.yellow:C.red}">${c.ats}</span>/100</td>
-    <td>${eligPill(c.eligibility)}</td>
-    <td><span class="pill ${c.improvements>2?'pill-orange':'pill-blue'}">${c.improvements} tips</span></td>
-    <td>${reviewPill}</td>
-  </tr>`;
-});
-
-// ═══════════════════════════════════════════════════════════
-// REVIEW QUEUE
-// ═══════════════════════════════════════════════════════════
-makeChart('queuePriorityChart','doughnut',
-  ['High Priority','Medium Priority','Low Priority'],
-  [{data:[4,11,13],backgroundColor:[C.red,C.yellow,C.blue],borderWidth:2,borderColor:'#1a1d27'}]
-);
-makeChart('reviewTriggerChart','bar',
-  ['Confidence <60%','Confidence 60-75%','IBAN Error','Amt Inconsistency','Missing VAT','Unknown Eligibility','Other'],
-  [{label:'Documents',data:[4,21,2,3,3,2,2],backgroundColor:[C.red,C.yellow,C.orange,C.purple,C.teal,C.pink,C.muted],borderRadius:4}],
-  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxRotation:30}},y:{grid:{color:'#2d325140'}}}}}
-);
-
-// Invoice review table (sample)
-const invRT = document.getElementById('invReviewTable');
-const invReviewSamples = [
-  {id:'inv-a1b2c3','vendor':'Müller & Partner GmbH','country':'DE','total':'€ 4,230','conf':0.58,'fields':'vendor_name, invoice_date','days':5,'priority':'High'},
-  {id:'inv-b2c3d4','vendor':'Wien Tech Consulting KG','country':'AT','total':'€ 8,750','conf':0.64,'fields':'total_gross, vat_amount','days':3,'priority':'Medium'},
-  {id:'inv-c3d4e5','vendor':'Bosch Rexroth AG','country':'DE','total':'€ 12,400','conf':0.71,'fields':'invoice_date','days':1,'priority':'Low'},
-  {id:'inv-d4e5f6','vendor':'Raiffeisen Software GmbH','country':'AT','total':'€ 6,100','conf':0.62,'fields':'vendor_iban, invoice_number','days':8,'priority':'High'},
-  {id:'inv-e5f6g7','vendor':'Siemens Digital Industries','country':'DE','total':'€ 9,800','conf':0.69,'fields':'due_date','days':2,'priority':'Medium'},
-];
-invReviewSamples.forEach(r => {
-  const pCol = r.priority==='High'?'red':r.priority==='Medium'?'yellow':'blue';
-  invRT.innerHTML += `<tr>
-    <td><code>${r.id}</code></td><td>${r.vendor}</td>
-    <td>${r.country==='DE'?'🇩🇪':r.country==='AT'?'🇦🇹':'🇨🇭'} ${r.country}</td>
-    <td>${r.total}</td><td>${confBar(r.conf)}</td>
-    <td><span style="color:var(--yellow);font-size:11px">${r.fields}</span></td>
-    <td>${r.days}d</td><td><span class="pill pill-${pCol}">${r.priority}</span></td>
-  </tr>`;
-});
-
-// CV review table
-const cvRT = document.getElementById('cvReviewTable');
-[{name:'Pierre Dupont',role:'consulting',country:'CH',conf:0.80,elig:'eu_eea_citizen',flags:'low_confidence',priority:'Medium',improvements:3},
- {name:'Mehmet Yilmaz',role:'consulting',country:'DE',conf:0.82,elig:'work_permit_required',flags:'work_permit_required',priority:'High',improvements:2},
- {name:'Priya Sharma',role:'engineering',country:'DE',conf:0.79,elig:'work_permit_required',flags:'work_permit_required, low_confidence',priority:'High',improvements:4}
-].forEach(r => {
-  const pCol = r.priority==='High'?'red':'yellow';
-  cvRT.innerHTML += `<tr>
-    <td><strong>${r.name}</strong></td><td>${rolePill(r.role)}</td>
-    <td>${r.country==='DE'?'🇩🇪':r.country==='AT'?'🇦🇹':'🇨🇭'} ${r.country}</td>
-    <td>${confBar(r.conf)}</td><td>${eligPill(r.elig)}</td>
-    <td><span style="color:var(--yellow);font-size:11px">${r.flags}</span></td>
-    <td><span class="pill pill-${pCol}">${r.priority}</span></td>
-    <td><span class="pill pill-orange">${r.improvements} tips</span></td>
-  </tr>`;
-});
-
-// ═══════════════════════════════════════════════════════════
-// GDPR CHARTS
-// ═══════════════════════════════════════════════════════════
-const dsrStatus = {completed:8,in_progress:5,overdue:2};
-makeChart('dsrStatusChart','doughnut',
-  ['Completed','In Progress','Overdue'],
-  [{data:Object.values(dsrStatus),backgroundColor:[C.green,C.blue,C.red],borderWidth:2,borderColor:'#1a1d27'}]
-);
-makeChart('auditActionChart','bar',
-  ['upload','extract','view','consent_grant','dsr_received','mask_pii','delete','export'],
-  [{label:'Actions',data:[22,22,18,10,6,8,5,4],backgroundColor:C.accent,borderRadius:4}].map(d=>({...d,backgroundColor:[C.blue,C.teal,C.muted,C.green,C.orange,C.purple,C.red,C.yellow]})),
-  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxRotation:30}},y:{grid:{color:'#2d325140'}}}}}
-);
-makeChart('dsrTypeChart','doughnut',
-  ['Access','Erasure','Portability','Rectification','Objection','Restriction'],
-  [{data:[5,3,2,2,2,1],backgroundColor:[C.blue,C.red,C.teal,C.yellow,C.orange,C.purple],borderWidth:2,borderColor:'#1a1d27'}]
-);
-makeChart('retentionChart','bar',
-  ['HGB §257\n10yr (DE)','OR Art.958f\n10yr (CH)','UGB\n7yr (AT)','GDPR Consent\nOngoing','CV\n1yr'],
-  [{label:'Documents',data:[24,12,10,22,20],backgroundColor:[C.blue,C.red,C.teal,C.green,C.purple],borderRadius:4}],
-  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'}}}}}
-);
-
-// DSR table
-const dsrTbody = document.getElementById('dsrTable');
-DSR_DATA.forEach(d => {
-  const statusPill = d.status==='completed'?'<span class="pill pill-green">Completed</span>':d.status==='overdue'?'<span class="pill pill-red">⚠ Overdue</span>':'<span class="pill pill-yellow">In Progress</span>';
-  const daysCell = d.days < 0 ? `<span style="color:var(--muted)">${Math.abs(d.days)}d ago</span>` : d.days < 7 ? `<span style="color:var(--yellow)">+${d.days}d</span>` : `<span style="color:var(--green)">+${d.days}d</span>`;
-  dsrTbody.innerHTML += `<tr><td><code>${d.id}</code></td><td><span class="pill pill-blue">${d.type}</span></td><td>${d.received}</td><td>${d.deadline}</td><td>${daysCell}</td><td>${statusPill}</td></tr>`;
-});
-
-// ═══════════════════════════════════════════════════════════
-// ANOMALY CHARTS
-// ═══════════════════════════════════════════════════════════
-makeChart('anomalyChart','doughnut',
-  ['Confidence <60%','Confidence 60-75%','Amt Inconsistency','IBAN Error','Non-std VAT','Permit Required','Overdue DSR','Expiring Retention'],
-  [{data:[4,21,3,2,5,5,2,8],backgroundColor:[C.red,C.yellow,C.purple,C.orange,C.teal,C.pink,C.red,C.blue],borderWidth:2,borderColor:'#1a1d27'}]
-);
-makeChart('errorCountryChart','bar',
-  ['🇩🇪 Germany','🇦🇹 Austria','🇨🇭 Switzerland'],
-  [{label:'Error Rate %',data:[38,47,27],backgroundColor:[C.blue,C.teal,C.red],borderRadius:4}],
-  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'},ticks:{callback:v=>v+'%'},max:60}}}}
-);
-</script>
-</body>
-</html>
+// ══════════════════════════════════════════════════�

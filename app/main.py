@@ -29,7 +29,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api import cvs, gdpr, invoices
+from app.api import ats, cvs, gdpr, invoices
 from app.config import get_settings
 from app.database.connection import create_tables
 
@@ -138,6 +138,7 @@ def create_app() -> FastAPI:
     app.include_router(invoices.router)
     app.include_router(cvs.router)
     app.include_router(gdpr.router)
+    app.include_router(ats.router)
 
     # ── Root endpoints ───────────────────────────────────────────────────────
     @app.get("/", tags=["System"], summary="API information")
@@ -154,6 +155,7 @@ def create_app() -> FastAPI:
                 "invoices": "/api/v1/invoices",
                 "cvs": "/api/v1/cvs",
                 "gdpr": "/api/v1/gdpr",
+                "ats": "/api/v1/ats",
                 "health": "/health",
             },
         }
@@ -178,6 +180,4 @@ if __name__ == "__main__":
         "app.main:app",
         host=settings.app_host,
         port=settings.app_port,
-        reload=settings.app_env.value == "development",
-        log_level=settings.log_level.lower(),
-    )
+        reload=settings.app_en
