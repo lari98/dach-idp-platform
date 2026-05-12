@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DACH Enterprise ATS — Intelligent Candidate Scoring</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --navy:#002D62; --navy-mid:#004494; --blue:#0066CC; --blue-light:#E8F0FB;
+  --gold:#C8960C; --gold-light:#FFF8E6;
+  --green:#1A7A4A; --green-light:#E6F5EC;
+  --red:#C0392B; --red-light:#FDEDEC;
+  --amber:#D4870A; --amber-light:#FEF5E7;
+  --gray-50:#F8FAFD; --gray-100:#EEF2F8; --gray-200:#D5DFF0;
+  --gray-400:#8A9BBE; --gray-600:#4A5D80; --gray-800:#1E2D4A;
+  --white:#FFFFFF;
+  --radius:8px; --radius-lg:14px;
+  --shadow:0 2px 12px rgba(0,45,98,.10);
+  --shadow-lg:0 6px 30px rgba(0,45,98,.14);
+  --font:'Segoe UI','Helvetica Neue',Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:var(--font);background:var(--gray-50);color:var(--gray-800);font-size:14px;line-height:1.55;}
+
+/* Header */
+.site-header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);color:#fff;padding:0 32px;height:62px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 3px 16px rgba(0,0,0,.22);position:sticky;top:0;z-index:100;}
+.header-brand{display:flex;align-items:center;gap:12px;}
+.brand-flag{font-size:20px;letter-spacing:2px;}
+.brand-title{font-size:17px;font-weight:700;letter-spacing:.3px;}
+.brand-sub{font-size:11px;color:rgba(255,255,255,.65);margin-top:1px;}
+.header-badges{display:flex;align-items:center;gap:10px;}
+.badge-pill{background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);border-radius:20px;padding:3px 10px;font-size:11px;color:rgba(255,255,255,.88);}
+.api-dot{width:7px;height:7px;border-radius:50%;background:#2ECC71;display:inline-block;margin-right:5px;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Nav */
+.nav-bar{background:var(--white);border-bottom:2px solid var(--gray-200);padding:0 32px;display:flex;gap:4px;box-shadow:0 1px 4px rgba(0,45,98,.07);}
+.nav-tab{padding:14px 20px 12px;font-size:13px;font-weight:600;color:var(--gray-600);border:none;border-bottom:3px solid transparent;background:none;cursor:pointer;transition:all .18s ease;display:flex;align-items:center;gap:7px;margin-bottom:-2px;}
+.nav-tab:hover{color:var(--navy-mid);}
+.nav-tab.active{color:var(--navy);border-bottom-color:var(--navy);}
+.tab-count{background:var(--blue-light);color:var(--blue);border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;}
+
+/* Layout */
+.main{max-width:1260px;margin:0 auto;padding:28px 24px 60px;}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* Cards */
+.card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);box-shadow:var(--shadow);padding:24px;margin-bottom:20px;}
+.card-title{font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.7px;display:flex;align-items:center;gap:8px;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid var(--gray-100);}
+.card-title .step-badge{width:22px;height:22px;background:var(--navy);color:#fff;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* Source toggle */
+.source-toggle{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+.source-toggle label{display:flex;align-items:center;gap:7px;padding:8px 16px;border:2px solid var(--gray-200);border-radius:30px;cursor:pointer;font-size:13px;font-weight:500;color:var(--gray-600);transition:all .16s ease;user-select:none;}
+.source-toggle input[type=radio]{display:none;}
+.source-toggle input[type=radio]:checked + label{border-color:var(--navy-mid);background:var(--blue-light);color:var(--navy);}
+.source-toggle label:hover{border-color:var(--blue);color:var(--blue);}
+
+/* Form */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.form-row.three{grid-template-columns:1fr 1fr 1fr;}
+.form-row.one{grid-template-columns:1fr;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group label{font-size:12px;font-weight:600;color:var(--gray-600);text-transform:uppercase;letter-spacing:.4px;}
+.form-group input,.form-group select,.form-group textarea{border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:9px 13px;font-size:13px;font-family:var(--font);color:var(--gray-800);background:var(--white);transition:border-color .15s;outline:none;width:100%;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(0,102,204,.1);}
+.form-group textarea{resize:vertical;min-height:170px;font-size:12.5px;line-height:1.55;}
+.form-hint{font-size:11px;color:var(--gray-400);margin-top:2px;}
+
+/* URL row */
+.url-row{display:flex;gap:10px;align-items:flex-start;}
+.url-row input{flex:1;}
+.btn-fetch{padding:9px 18px;background:var(--navy);color:#fff;border:none;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
+.btn-fetch:hover{background:var(--navy-mid);}
+.fetch-status{font-size:11.5px;color:var(--gray-400);margin-top:6px;}
+.fetch-status.ok{color:var(--green);}
+.fetch-status.err{color:var(--red);}
+
+/* Drop zone */
+.drop-zone{border:2px dashed var(--gray-200);border-radius:var(--radius-lg);padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--gray-50);position:relative;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--blue);background:var(--blue-light);}
+.drop-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.drop-icon{font-size:36px;margin-bottom:8px;}
+.drop-title{font-size:14px;font-weight:600;color:var(--navy);}
+.drop-sub{font-size:12px;color:var(--gray-400);margin-top:4px;}
+.drop-file-name{margin-top:10px;font-size:12px;font-weight:600;color:var(--green);display:none;}
+
+/* Persona cards */
+.persona-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.persona-card{border:2px solid var(--gray-200);border-radius:var(--radius);padding:14px;cursor:pointer;transition:all .15s;}
+.persona-card:hover{border-color:var(--blue);background:var(--blue-light);}
+.persona-card.selected{border-color:var(--navy);background:var(--blue-light);}
+.persona-name{font-weight:700;font-size:13px;color:var(--navy);}
+.persona-title{font-size:12px;color:var(--gray-600);margin-top:2px;}
+.persona-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+.persona-tag{background:var(--gray-100);color:var(--gray-600);border-radius:4px;padding:2px 6px;font-size:10px;font-weight:500;}
+
+/* Options */
+.options-row{display:flex;gap:24px;align-items:center;padding:14px 18px;background:var(--gray-50);border-radius:var(--radius);border:1px solid var(--gray-100);flex-wrap:wrap;}
+.toggle-group{display:flex;align-items:center;gap:8px;}
+.toggle-label{font-size:13px;font-weight:500;color:var(--gray-800);}
+.toggle-switch{position:relative;width:40px;height:22px;}
+.toggle-switch input{display:none;}
+.toggle-slider{position:absolute;inset:0;background:var(--gray-200);border-radius:22px;cursor:pointer;transition:background .2s;}
+.toggle-slider::before{content:'';position:absolute;left:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,.2);}
+.toggle-switch input:checked + .toggle-slider{background:var(--navy);}
+.toggle-switch input:checked + .toggle-slider::before{transform:translateX(18px);}
+
+/* Run button */
+.btn-run{width:100%;padding:16px;background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);color:#fff;border:none;border-radius:var(--radius-lg);font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.5px;box-shadow:0 4px 18px rgba(0,45,98,.30);transition:all .18s;display:flex;align-items:center;justify-content:center;gap:10px;}
+.btn-run:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,45,98,.36);}
+.btn-run:active{transform:translateY(0);}
+.btn-run:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+.spinner{width:20px;height:20px;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Results */
+#resultsPanel{display:none;margin-top:24px;}
+.results-header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-mid) 100%);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:24px 28px;color:#fff;display:flex;align-items:center;gap:28px;flex-wrap:wrap;}
+.score-circle{width:110px;height:110px;position:relative;}
+.score-circle svg{transform:rotate(-90deg);}
+.bg-ring{fill:none;stroke:rgba(255,255,255,.15);stroke-width:10;}
+.score-ring{fill:none;stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.22,.61,.36,1);}
+.score-text{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.score-number{font-size:28px;font-weight:800;color:#fff;line-height:1;}
+.score-label{font-size:10px;color:rgba(255,255,255,.7);margin-top:2px;}
+.results-meta{flex:1;min-width:0;}
+.result-job-title{font-size:20px;font-weight:700;margin-bottom:4px;}
+.result-employer{font-size:14px;color:rgba(255,255,255,.75);margin-bottom:12px;}
+.recommendation-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:30px;font-size:13px;font-weight:700;letter-spacing:.4px;}
+.rec-STRONG_MATCH{background:rgba(26,122,74,.85);}
+.rec-GOOD_MATCH{background:rgba(0,102,204,.85);}
+.rec-POSSIBLE_MATCH{background:rgba(212,135,10,.85);}
+.rec-WEAK_MATCH{background:rgba(160,60,0,.85);}
+.rec-NO_MATCH{background:rgba(192,57,43,.85);}
+.auto-rejected-banner{background:var(--red-light);border-left:4px solid var(--red);padding:12px 16px;border-radius:0 var(--radius) var(--radius) 0;color:var(--red);font-weight:600;font-size:13px;display:none;margin-bottom:16px;}
+
+.results-body{background:var(--white);border:1px solid var(--gray-200);border-top:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);padding:28px;}
+.results-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+@media(max-width:800px){.results-grid{grid-template-columns:1fr;}}
+
+/* Requirements */
+.req-list{display:flex;flex-direction:column;gap:8px;}
+.req-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:var(--radius);font-size:13px;}
+.req-item.pass{background:var(--green-light);}
+.req-item.fail{background:var(--red-light);}
+.req-item.unknown{background:var(--amber-light);}
+.req-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.req-name{font-weight:600;color:var(--gray-800);}
+.req-detail{font-size:11.5px;color:var(--gray-600);margin-top:2px;}
+
+/* Breakdown */
+.breakdown-list{display:flex;flex-direction:column;gap:12px;}
+.breakdown-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+.breakdown-name{font-size:12px;font-weight:600;color:var(--gray-800);}
+.breakdown-value{font-size:12px;font-weight:700;color:var(--navy);}
+.breakdown-bar-track{height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden;}
+.breakdown-bar-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.22,.61,.36,1);width:0;}
+.breakdown-weight{font-size:10px;color:var(--gray-400);margin-top:2px;}
+
+/* Skills */
+.skills-group-title{font-size:11px;font-weight:700;color:var(--gray-600);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;margin-top:14px;}
+.skills-pills{display:flex;flex-wrap:wrap;gap:6px;}
+.skill-pill{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:5px;}
+.pill-matched{background:var(--green-light);color:var(--green);border:1px solid rgba(26,122,74,.25);}
+.pill-missing{background:var(--red-light);color:var(--red);border:1px solid rgba(192,57,43,.25);}
+.pill-preferred{background:var(--amber-light);color:var(--amber);border:1px solid rgba(212,135,10,.25);}
+.pill-bonus{background:var(--blue-light);color:var(--blue);border:1px solid rgba(0,102,204,.2);}
+.pill-crit{background:var(--red);color:#fff;font-weight:700;font-size:10px;padding:2px 7px;border-radius:4px;margin-left:4px;}
+
+/* CV summary */
+.cv-summary-grid{display:flex;flex-wrap:wrap;gap:10px;}
+.cv-chip{display:flex;align-items:center;gap:6px;background:var(--blue-light);border:1px solid var(--gray-200);border-radius:var(--radius);padding:8px 14px;font-size:12.5px;}
+.cv-chip .chip-icon{font-size:15px;}
+.cv-chip .chip-label{font-size:10px;color:var(--gray-400);display:block;}
+.cv-chip .chip-val{font-weight:600;color:var(--navy);}
+
+/* Language bars */
+.lang-list{display:flex;flex-direction:column;gap:8px;}
+.lang-item{display:flex;align-items:center;gap:10px;font-size:12.5px;}
+.lang-name{width:80px;font-weight:600;}
+.lang-bar-track{flex:1;height:6px;background:var(--gray-100);border-radius:3px;}
+.lang-bar-fill{height:100%;border-radius:3px;background:var(--navy-mid);transition:width 1s ease;}
+.lang-level{width:60px;font-size:11px;color:var(--gray-600);text-align:right;}
+
+/* Recruiter box */
+.recruiter-box{background:linear-gradient(135deg,#EEF4FF 0%,#E8F0FB 100%);border:1px solid rgba(0,68,148,.15);border-left:4px solid var(--navy-mid);border-radius:var(--radius);padding:16px 18px;}
+.recruiter-box-title{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.recruiter-text{font-size:13px;color:var(--gray-800);line-height:1.6;font-style:italic;}
+
+/* Tips */
+.tips-list{display:flex;flex-direction:column;gap:8px;}
+.tip-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;background:var(--gold-light);border:1px solid rgba(200,150,12,.2);border-radius:var(--radius);font-size:13px;}
+.tip-num{width:22px;height:22px;background:var(--gold);color:#fff;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+
+/* GDPR strip */
+.gdpr-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:var(--gray-50);border-top:1px solid var(--gray-100);border-radius:0 0 var(--radius-lg) var(--radius-lg);font-size:11.5px;color:var(--gray-600);}
+.gdpr-badge{display:inline-flex;align-items:center;gap:5px;background:var(--green-light);color:var(--green);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:700;}
+
+/* Job library */
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:20px;}
+.filter-bar input,.filter-bar select{border:1.5px solid var(--gray-200);border-radius:var(--radius);padding:8px 12px;font-size:13px;outline:none;font-family:var(--font);}
+.filter-bar input{width:220px;}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--blue);}
+.filter-label{font-size:11px;color:var(--gray-600);font-weight:600;margin-bottom:4px;}
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+@media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
+.kpi-card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);padding:18px 20px;text-align:center;box-shadow:var(--shadow);}
+.kpi-val{font-size:28px;font-weight:800;color:var(--navy);}
+.kpi-label{font-size:11.5px;color:var(--gray-400);margin-top:3px;}
+.jobs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+.job-card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);padding:20px;box-shadow:var(--shadow);transition:box-shadow .15s,transform .15s;cursor:pointer;}
+.job-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px);}
+.job-card-employer{font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.job-card-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:8px;}
+.job-card-meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.job-chip{background:var(--gray-100);color:var(--gray-600);border-radius:4px;padding:3px 8px;font-size:11px;font-weight:500;}
+.job-chip.lang-de{background:#FFF4E6;color:#A05000;}
+.job-chip.lang-en{background:#E6F0FF;color:#004494;}
+.job-chip.lang-fr{background:#EDF7ED;color:#1A7A4A;}
+.job-chip.lang-sv{background:#F0EAFF;color:#5B00C8;}
+.job-card-skills{display:flex;flex-wrap:wrap;gap:4px;}
+.job-skill-tag{background:var(--blue-light);color:var(--blue);border-radius:4px;padding:2px 7px;font-size:11px;}
+.job-card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:10px;border-top:1px solid var(--gray-100);font-size:12px;color:var(--gray-400);}
+.btn-score-this{background:var(--navy);color:#fff;border:none;border-radius:var(--radius);padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:background .15s;}
+.btn-score-this:hover{background:var(--navy-mid);}
+
+/* Bulk */
+.bulk-table{width:100%;border-collapse:collapse;font-size:13px;}
+.bulk-table th{background:var(--navy);color:#fff;padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+.bulk-table td{padding:10px 14px;border-bottom:1px solid var(--gray-100);}
+.bulk-table tr:hover td{background:var(--gray-50);}
+.score-bar-outer{width:80px;height:8px;background:var(--gray-100);border-radius:4px;display:inline-block;vertical-align:middle;}
+.rank-badge{width:26px;height:26px;border-radius:50%;background:var(--navy);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;}
+.rank-badge.gold{background:var(--gold);}
+.rank-badge.silver{background:#8A8A8A;}
+.rank-badge.bronze{background:#A05A2C;}
+
+/* Chart */
+.chart-wrap{width:100%;max-width:280px;margin:0 auto;}
+
+/* Misc */
+.divider{height:1px;background:var(--gray-100);margin:20px 0;}
+.hidden{display:none!important;}
+.mt-8{margin-top:8px;}
+.mt-16{margin-top:16px;}
+.section-title{font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="header-brand">
+    <span class="brand-flag">🇩🇪🇨🇭🇦🇹</span>
+    <div>
+      <div class="brand-title">DACH Enterprise ATS</div>
+      <div class="brand-sub">Intelligent Candidate Scoring Platform · v3.1.0</div>
+    </div>
+  </div>
+  <div class="header-badges">
+    <span class="badge-pill"><span class="api-dot"></span>API Connected</span>
+    <span class="badge-pill">GDPR / DSGVO</span>
+    <span class="badge-pill">DE · CH · AT · EU</span>
+    <span class="badge-pill">Multilingual DE/EN/FR/SV</span>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="nav-bar">
+  <button class="nav-tab active" onclick="showTab('scoreTab',this)">🎯 Score CV</button>
+  <button class="nav-tab" onclick="showTab('jobsTab',this)">💼 Job Library <span class="tab-count" id="jobCount">—</span></button>
+  <button class="nav-tab" onclick="showTab('bulkTab',this)">📊 Bulk Screen</button>
+  <button class="nav-tab" onclick="showTab('analyticsTab',this)">📈 Analytics</button>
+</nav>
+
+<div class="main">
+
+<!-- ═══ TAB 1: SCORE CV ═══ -->
+<div id="scoreTab" class="tab-panel active">
+
+  <!-- STEP 1: JOB -->
+  <div class="card">
+    <div class="card-title"><span class="step-badge">1</span> Job to Score Against — Any Company, Any Country</div>
+    <div class="source-toggle">
+      <input type="radio" name="jobSource" id="js_example" value="example" checked>
+      <label for="js_example">📋 Choose from Library</label>
+      <input type="radio" name="jobSource" id="js_paste" value="paste">
+      <label for="js_paste">✏️ Paste Job Description</label>
+      <input type="radio" name="jobSource" id="js_url" value="url">
+      <label for="js_url">🔗 Fetch from URL</label>
+    </div>
+
+    <!-- Example picker -->
+    <div id="job_example_panel">
+      <div class="form-row one">
+        <div class="form-group">
+          <label>Select from Job Library</label>
+          <select id="exampleJobSelect">
+            <option value="">— Loading jobs… —</option>
+          </select>
+          <div class="form-hint">Pre-loaded: Deloitte · KPMG · Deutsche Bank · SIX Group · Accenture · Sparkasse · PwC · Nordea — or add your own via Paste / URL tabs</div>
+        </div>
+      </div>
+      <div id="jobPreview" class="hidden" style="margin-top:12px;padding:12px 16px;background:var(--blue-light);border-radius:var(--radius);border:1px solid var(--gray-200);">
+        <div id="jobPreviewContent" style="font-size:12.5px;color:var(--navy);"></div>
+      </div>
+    </div>
+
+    <!-- Paste JD -->
+    <div id="job_paste_panel" class="hidden">
+      <p style="font-size:12.5px;color:var(--gray-600);margin-bottom:14px;">Paste any job description — Microsoft, Apple, JP Morgan, UBS, Swisscom, Deutsche Bahn, Raiffeisen, any company worldwide. The engine auto-extracts all requirements.</p>
+      <div class="form-row three">
+        <div class="form-group">
+          <label>Employer / Company</label>
+          <input type="text" id="jd_employer" placeholder="e.g. Raiffeisen Bank, Apple, JP Morgan…">
+        </div>
+        <div class="form-group">
+          <label>Job Title</label>
+          <input type="text" id="jd_title" placeholder="e.g. Senior Consultant, Data Engineer…">
+        </div>
+        <div class="form-group">
+          <label>JD Language</label>
+          <select id="jd_language">
+            <option value="en">🇬🇧 English</option>
+            <option value="de">🇩🇪 Deutsch</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="sv">🇸🇪 Svenska</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row one">
+        <div class="form-group">
+          <label>Job Description Text</label>
+          <textarea id="jd_text" placeholder="Paste the full job description here…
+
+Works with postings from: LinkedIn · XING · StepStone · Indeed · Glassdoor
+Or directly from careers pages of: Deloitte · KPMG · Deutsche Bank · UBS · Swisscom
+JP Morgan · Microsoft · Apple · Accenture · SAP · Bosch · Siemens · DHL — any company
+
+The ATS engine will automatically extract:
+✓ Required skills &amp; preferred skills    ✓ Years of experience
+✓ Education requirements               ✓ Language requirements (DE/EN/FR/SV)
+✓ Hard-gate requirements               ✓ Department &amp; seniority level" style="min-height:200px;"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- URL fetch -->
+    <div id="job_url_panel" class="hidden">
+      <p style="font-size:12.5px;color:var(--gray-600);margin-bottom:14px;">Enter a job posting URL — the engine will try to fetch the text automatically. If the site blocks it, paste the text manually below.</p>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>Job Posting URL</label>
+        <div class="url-row">
+          <input type="url" id="jd_url" placeholder="https://jobs.deloitte.de/job/… or any job board URL">
+          <button class="btn-fetch" onclick="fetchJDFromUrl()">⬇ Fetch Text</button>
+        </div>
+        <div class="fetch-status" id="fetchStatus">Enter a URL and click Fetch — works with most public job boards</div>
+      </div>
+      <div class="form-row three">
+        <div class="form-group">
+          <label>Employer</label>
+          <input type="text" id="jd_url_employer" placeholder="Company name">
+        </div>
+        <div class="form-group">
+          <label>Job Title</label>
+          <input type="text" id="jd_url_title" placeholder="Job title">
+        </div>
+        <div class="form-group">
+          <label>Language</label>
+          <select id="jd_url_language">
+            <option value="en">🇬🇧 English</option>
+            <option value="de">🇩🇪 Deutsch</option>
+            <option value="fr">🇫🇷 Français</option>
+            <option value="sv">🇸🇪 Svenska</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row one">
+        <div class="form-group">
+          <label>Job Description (fetched or paste manually)</label>
+          <textarea id="jd_url_text" placeholder="The job description text will appear here after fetching.
+You can also paste it manually — copy all text from the job posting page." style="min-height:140px;"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: CV -->
+  <div class="card">
+    <div class="card-title"><span class="step-badge">2</span> Candidate CV — Upload, Paste, or Use Demo</div>
+    <div class="source-toggle">
+      <input type="radio" name="cvSource" id="cv_paste" value="paste" checked>
+      <label for="cv_paste">✏️ Paste CV Text</label>
+      <input type="radio" name="cvSource" id="cv_upload" value="upload">
+      <label for="cv_upload">📄 Upload PDF</label>
+      <input type="radio" name="cvSource" id="cv_demo" value="demo">
+      <label for="cv_demo">👤 Demo Profile</label>
+    </div>
+
+    <!-- Paste CV -->
+    <div id="cv_paste_panel">
+      <div class="form-row" style="grid-template-columns:2fr 1fr;">
+        <div class="form-group">
+          <label>CV / Resume Text</label>
+          <textarea id="cv_text" placeholder="Paste the candidate's complete CV or resume here…
+
+Copy and paste from:
+• Microsoft Word or Google Docs (Ctrl+A, Ctrl+C)
+• LinkedIn profile (copy all text from the page)
+• Copied PDF text (open PDF, select all, copy)
+• Any language: German (DE), English (EN), French (FR), Swedish (SV)
+
+The ATS engine will automatically extract:
+✓ Skills &amp; certifications       ✓ Years of experience (from dates)
+✓ Education level               ✓ Languages &amp; proficiency levels
+✓ Location / city               ✓ EU work authorisation clues" style="min-height:220px;"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Candidate Name <span style="color:var(--gray-400);font-weight:400;">(optional)</span></label>
+          <input type="text" id="cv_name" placeholder="e.g. Max Mustermann">
+          <div class="form-hint mt-8">Auto-detected from first line of CV if left blank.</div>
+          <div style="margin-top:16px;padding:14px;background:var(--blue-light);border-radius:var(--radius);font-size:12px;color:var(--navy);line-height:1.6;">
+            <strong>💡 Best results tip:</strong><br>Include the complete CV with:<br>
+            • Work history with dates (2019–2023)<br>
+            • Skills / Kenntnisse section<br>
+            • Education / Ausbildung<br>
+            • Languages / Sprachen with levels<br>
+            • Location / city
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload PDF -->
+    <div id="cv_upload_panel" class="hidden">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="cvFileInput" accept=".pdf,.txt" onchange="handleFileSelect(this)">
+        <div class="drop-icon">📄</div>
+        <div class="drop-title">Drop PDF here or click to browse</div>
+        <div class="drop-sub">Supports PDF · TXT — text is extracted automatically</div>
+        <div class="drop-file-name" id="dropFileName"></div>
+      </div>
+      <div class="form-group" style="margin-top:12px;max-width:340px;">
+        <label>Candidate Name <span style="color:var(--gray-400);font-weight:400;">(optional)</span></label>
+        <input type="text" id="cv_upload_name" placeholder="Auto-detected from PDF if blank">
+      </div>
+    </div>
+
+    <!-- Demo profiles -->
+    <div id="cv_demo_panel" class="hidden">
+      <p style="font-size:12.5px;color:var(--gray-600);margin-bottom:14px;">Select a realistic DACH enterprise candidate profile to demo ATS scoring:</p>
+      <div class="persona-grid">
+        <div class="persona-card selected" onclick="selectPersona('cv-mock-0',this)">
+          <div class="persona-name">Maximilian Schneider</div>
+          <div class="persona-title">Senior Software Engineer · München, DE</div>
+          <div class="persona-tags">
+            <span class="persona-tag">8.5 yrs exp</span>
+            <span class="persona-tag">M.Sc. TU München</span>
+            <span class="persona-tag">AI-102 · AZ-204</span>
+            <span class="persona-tag">DE native · EN C1</span>
+            <span class="persona-tag">EU citizen</span>
+          </div>
+        </div>
+        <div class="persona-card" onclick="selectPersona('cv-mock-1',this)">
+          <div class="persona-name">Sophie Keller</div>
+          <div class="persona-title">Senior Finance Analyst · Zürich, CH</div>
+          <div class="persona-tags">
+            <span class="persona-tag">6 yrs exp</span>
+            <span class="persona-tag">UBS · Credit Suisse</span>
+            <span class="persona-tag">CFA · IFRS 9</span>
+            <span class="persona-tag">DE C2 · EN C1 · FR B2</span>
+            <span class="persona-tag">Swiss citizen</span>
+          </div>
+        </div>
+        <div class="persona-card" onclick="selectPersona('cv-mock-2',this)">
+          <div class="persona-name">Amadou Diallo</div>
+          <div class="persona-title">Data Scientist · Frankfurt, DE</div>
+          <div class="persona-tags">
+            <span class="persona-tag">4 yrs exp</span>
+            <span class="persona-tag">Python · ML · Azure</span>
+            <span class="persona-tag">Non-EU (permit req.)</span>
+            <span class="persona-tag">EN C1 · DE B2 · FR C1</span>
+          </div>
+        </div>
+        <div class="persona-card" onclick="selectPersona('cv-mock-3',this)">
+          <div class="persona-name">Anna Gruber</div>
+          <div class="persona-title">HR Generalist · Wien, AT</div>
+          <div class="persona-tags">
+            <span class="persona-tag">2 yrs exp</span>
+            <span class="persona-tag">SAP HCM · Recruiting</span>
+            <span class="persona-tag">EU citizen</span>
+            <span class="persona-tag">DE native · EN B2</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: OPTIONS -->
+  <div class="card" style="padding:16px 24px;">
+    <div class="card-title" style="margin-bottom:12px;"><span class="step-badge">3</span> Scoring Options</div>
+    <div class="options-row">
+      <div class="toggle-group">
+        <label class="toggle-switch"><input type="checkbox" id="blindModeToggle"><span class="toggle-slider"></span></label>
+        <span class="toggle-label">🙈 Blind Mode <span style="font-size:11px;color:var(--gray-400);">(hide PII — AGG / EU anti-discrimination)</span></span>
+      </div>
+      <div class="toggle-group">
+        <label class="toggle-switch"><input type="checkbox" id="strictModeToggle" checked><span class="toggle-slider"></span></label>
+        <span class="toggle-label">🔒 Strict Hard Gates <span style="font-size:11px;color:var(--gray-400);">(auto-reject on hard requirement fail)</span></span>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="font-size:11px;color:var(--gray-400);">Scoring model: Taleo · Workday · SAP SuccessFactors compatible</div>
+    </div>
+  </div>
+
+  <!-- RUN -->
+  <button class="btn-run" id="runBtn" onclick="runATSScoring()">
+    <span id="runBtnText">🚀 Run ATS Analysis</span>
+    <div class="spinner" id="runSpinner"></div>
+  </button>
+
+  <!-- RESULTS PANEL -->
+  <div id="resultsPanel">
+    <div class="results-header">
+      <div>
+        <div class="score-circle" id="scoreCircle">
+          <svg viewBox="0 0 110 110" width="110" height="110">
+            <circle class="bg-ring" cx="55" cy="55" r="48"/>
+            <circle class="score-ring" id="scoreRing" cx="55" cy="55" r="48" stroke="#2ECC71" stroke-dasharray="301.6" stroke-dashoffset="301.6"/>
+          </svg>
+          <div class="score-text">
+            <div class="score-number" id="scoreNumber">0</div>
+            <div class="score-label">ATS SCORE</div>
+          </div>
+        </div>
+      </div>
+      <div class="results-meta">
+        <div class="result-job-title" id="resultJobTitle">—</div>
+        <div class="result-employer" id="resultEmployer">—</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="recommendation-badge" id="recBadge">—</span>
+          <span id="shortlistBadge" style="display:none;background:rgba(26,122,74,.75);color:#fff;padding:5px 14px;border-radius:30px;font-size:12px;font-weight:700;">✓ SHORTLIST</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="results-body">
+      <div class="auto-rejected-banner" id="autoRejectedBanner">
+        ⛔ Auto-Rejected — <span id="autoRejectedReason"></span>
+      </div>
+
+      <div class="results-grid">
+        <div>
+          <div class="section-title">🔒 Hard Requirement Gates</div>
+          <div class="req-list" id="reqList"></div>
+        </div>
+        <div>
+          <div class="section-title">📊 Score Breakdown (Weighted)</div>
+          <div class="breakdown-list" id="breakdownList"></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="results-grid">
+        <div>
+          <div class="section-title">🎯 Skills Analysis</div>
+          <div class="skills-group-title">✅ Matched Skills</div>
+          <div class="skills-pills" id="matchedSkills"></div>
+          <div class="skills-group-title">❌ Missing Required <span style="color:var(--red);font-size:10px;">(critical — must address)</span></div>
+          <div class="skills-pills" id="missingRequired"></div>
+          <div class="skills-group-title">🔸 Missing Preferred</div>
+          <div class="skills-pills" id="missingPreferred"></div>
+          <div class="skills-group-title">⭐ Bonus Skills <span style="color:var(--blue);font-size:10px;">(beyond JD requirements)</span></div>
+          <div class="skills-pills" id="bonusSkills"></div>
+        </div>
+        <div>
+          <div class="section-title">👤 CV Parse Summary</div>
+          <div class="cv-summary-grid" id="cvParsedGrid"></div>
+          <div class="section-title mt-16">🌐 Languages Detected</div>
+          <div class="lang-list" id="langList"></div>
+          <div class="section-title mt-16">📡 Score Radar</div>
+          <div class="chart-wrap"><canvas id="radarChart"></canvas></div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section-title">🧠 AI Recruiter Summary</div>
+      <div class="recruiter-box">
+        <div class="recruiter-box-title">Internal Use Only · Not for Candidate Distribution · GDPR Protected</div>
+        <div class="recruiter-text" id="recruiterText">—</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="section-title">💡 Candidate Improvement Roadmap</div>
+      <div class="tips-list" id="tipsList"></div>
+    </div>
+
+    <div class="gdpr-strip">
+      <span class="gdpr-badge">✓ GDPR</span>
+      <span>Processed under DSGVO Art. 6(1)(b) — recruitment legitimate interest.</span>
+      <span>·</span><span>No PII stored beyond session.</span>
+      <span>·</span><span>Candidate right to erasure applies.</span>
+      <span id="blindModeNote" style="display:none;color:var(--green);font-weight:600;">🙈 Blind mode active — name &amp; location hidden per AGG.</span>
+    </div>
+  </div>
+</div><!-- /scoreTab -->
+
+<!-- ═══ TAB 2: JOB LIBRARY ═══ -->
+<div id="jobsTab" class="tab-panel">
+  <div class="kpi-row">
+    <div class="kpi-card"><div class="kpi-val" id="kpiActiveJobs">—</div><div class="kpi-label">Active Jobs</div></div>
+    <div class="kpi-card"><div class="kpi-val">4</div><div class="kpi-label">Languages</div></div>
+    <div class="kpi-card"><div class="kpi-val">4</div><div class="kpi-label">Countries</div></div>
+    <div class="kpi-card"><div class="kpi-val" id="kpiEmployers">—</div><div class="kpi-label">Employers</div></div>
+  </div>
+  <div class="filter-bar">
+    <div><div class="filter-label">Search</div><input type="text" id="jobSearch" placeholder="Title, employer…" oninput="filterJobs()"></div>
+    <div><div class="filter-label">Language</div>
+      <select id="jobLangFilter" onchange="filterJobs()">
+        <option value="">All</option>
+        <option value="de">🇩🇪 Deutsch</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="fr">🇫🇷 Français</option>
+        <option value="sv">🇸🇪 Svenska</option>
+      </select>
+    </div>
+    <div><div class="filter-label">Department</div>
+      <select id="jobDeptFilter" onchange="filterJobs()">
+        <option value="">All</option>
+        <option value="consulting">Consulting</option>
+        <option value="finance">Finance</option>
+        <option value="audit">Audit</option>
+        <option value="technology">Technology</option>
+        <option value="data">Data</option>
+        <option value="hr">HR</option>
+        <option value="tax">Tax</option>
+        <option value="banking">Banking</option>
+        <option value="risk">Risk</option>
+      </select>
+    </div>
+  </div>
+  <div class="jobs-grid" id="jobsGrid"></div>
+</div>
+
+<!-- ═══ TAB 3: BULK SCREEN ═══ -->
+<div id="bulkTab" class="tab-panel">
+  <div class="card">
+    <div class="card-title">📊 Bulk Candidate Screening</div>
+    <div class="form-row" style="grid-template-columns:1fr auto;align-items:end;">
+      <div class="form-group">
+        <label>Select Job</label>
+        <select id="bulkJobSelect"><option value="">— Select a job —</option></select>
+      </div>
+      <button class="btn-run" style="width:auto;padding:10px 24px;font-size:13px;" onclick="runBulkScreen()">🚀 Screen All</button>
+    </div>
+    <div class="form-hint">Screens 4 demo profiles against the selected job. Produces ranked table with scores, gaps, and shortlist decision.</div>
+  </div>
+  <div id="bulkResults" class="hidden">
+    <div class="card">
+      <div class="card-title" id="bulkJobTitle">Rankings</div>
+      <div style="overflow-x:auto;">
+        <table class="bulk-table">
+          <thead><tr>
+            <th>Rank</th><th>Candidate</th><th>ATS Score</th>
+            <th>Match</th><th>Shortlist</th><th>Hard Gates</th><th>Matched Skills</th><th>Missing Req.</th>
+          </tr></thead>
+          <tbody id="bulkTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TAB 4: ANALYTICS ═══ -->
+<div id="analyticsTab" class="tab-panel">
+  <div class="results-grid" style="margin-bottom:20px;">
+    <div class="card"><div class="card-title">📊 Score Distribution</div><canvas id="distChart" height="200"></canvas></div>
+    <div class="card"><div class="card-title">🏷 Match Categories</div><canvas id="matchChart" height="200"></canvas></div>
+  </div>
+  <div class="results-grid">
+    <div class="card"><div class="card-title">🌐 JD Language Mix</div><canvas id="langChart" height="200"></canvas></div>
+    <div class="card"><div class="card-title">⚖️ Scoring Weight Model (Taleo/Workday compatible)</div><canvas id="weightChart" height="200"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">📋 Enterprise Pipeline Stage Model</div>
+    <div style="display:flex;gap:0;overflow-x:auto;border:1px solid var(--gray-200);border-radius:var(--radius);">
+      <div style="flex:1;text-align:center;padding:16px 10px;background:var(--blue-light);border-right:1px solid var(--gray-200);">
+        <div style="font-size:28px;">📥</div><div style="font-weight:700;color:var(--navy);margin-top:6px;">Applied</div><div style="font-size:11px;color:var(--gray-400);">ATS auto-screen</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:16px 10px;background:#E8F5E9;border-right:1px solid var(--gray-200);">
+        <div style="font-size:28px;">🔍</div><div style="font-weight:700;color:var(--green);margin-top:6px;">Screened</div><div style="font-size:11px;color:var(--gray-400);">Score ≥ 50</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:16px 10px;background:var(--gold-light);border-right:1px solid var(--gray-200);">
+        <div style="font-size:28px;">📞</div><div style="font-weight:700;color:var(--amber);margin-top:6px;">Phone Interview</div><div style="font-size:11px;color:var(--gray-400);">Score ≥ 65</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:16px 10px;background:#EDE7F6;border-right:1px solid var(--gray-200);">
+        <div style="font-size:28px;">💻</div><div style="font-weight:700;color:#5B00C8;margin-top:6px;">Technical</div><div style="font-size:11px;color:var(--gray-400);">Shortlisted</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:16px 10px;background:#E8F5E9;border-right:1px solid var(--gray-200);">
+        <div style="font-size:28px;">🤝</div><div style="font-weight:700;color:var(--green);margin-top:6px;">Final Interview</div><div style="font-size:11px;color:var(--gray-400);">Top 3–5 candidates</div>
+      </div>
+      <div style="flex:1;text-align:center;padding:16px 10px;background:var(--green-light);">
+        <div style="font-size:28px;">🎉</div><div style="font-weight:700;color:var(--green);margin-top:6px;">Offer / Hired</div><div style="font-size:11px;color:var(--gray-400);">Score ≥ 80</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+const API = 'http://localhost:8000/api/v1/ats';
+let allJobs = [];
+let selectedPersona = 'cv-mock-0';
+let selectedFile = null;
+let radarChartInstance = null;
+
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// Source toggles
+document.querySelectorAll('input[name="jobSource"]').forEach(r => {
+  r.addEventListener('change', () => {
+    ['example','paste','url'].forEach(v =>
+      document.getElementById('job_'+v+'_panel').classList.add('hidden'));
+    document.getElementById('job_'+r.value+'_panel').classList.remove('hidden');
+  });
+});
+document.querySelectorAll('input[name="cvSource"]').forEach(r => {
+  r.addEventListener('change', () => {
+    ['paste','upload','demo'].forEach(v =>
+      document.getElementById('cv_'+v+'_panel').classList.add('hidden'));
+    document.getElementById('cv_'+r.value+'_panel').classList.remove('hidden');
+  });
+});
+
+// Drag & drop
+const dz = document.getElementById('dropZone');
+['dragenter','dragover'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.add('drag-over'); }));
+['dragleave','drop'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.remove('drag-over'); }));
+dz.addEventListener('drop', ev => { const f = ev.dataTransfer.files[0]; if(f){selectedFile=f;showFileName(f.name);} });
+dz.addEventListener('click', () => document.getElementById('cvFileInput').click());
+function handleFileSelect(inp) { if(inp.files[0]){selectedFile=inp.files[0];showFileName(inp.files[0].name);} }
+function showFileName(n) { const e=document.getElementById('dropFileName'); e.textContent='✓ '+n; e.style.display='block'; }
+
+function selectPersona(id, card) {
+  document.querySelectorAll('.persona-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  selectedPersona = id;
+}
+
+async function loadJobs() {
+  try {
+    const res = await fetch(API+'/jobs');
+    allJobs = await res.json();
+    populateJobSelects();
+    renderJobsGrid(allJobs);
+    document.getElementById('jobCount').textContent = allJobs.length;
+    document.getElementById('kpiActiveJobs').textContent = allJobs.filter(j=>j.is_active).length;
+    document.getElementById('kpiEmployers').textContent = new Set(allJobs.map(j=>j.employer)).size;
+  } catch(e) { console.warn('Jobs load failed:', e); }
+}
+
+function populateJobSelects() {
+  const opts = allJobs.map(j =>
+    '<option value="'+j.job_id+'">['+j.language.toUpperCase()+'] '+j.employer+' — '+j.title+'</option>').join('');
+  ['exampleJobSelect','bulkJobSelect'].forEach(id => {
+    document.getElementById(id).innerHTML = '<option value="">— Select a job —</option>' + opts;
+  });
+  document.getElementById('exampleJobSelect').addEventListener('change', showJobPreview);
+}
+
+function showJobPreview() {
+  const id = document.getElementById('exampleJobSelect').value;
+  const job = allJobs.find(j => j.job_id === id);
+  const panel = document.getElementById('jobPreview');
+  if (!job) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  document.getElementById('jobPreviewContent').innerHTML =
+    '<strong>'+job.employer+'</strong> · '+(job.location||'—')+' · '+(job.seniority||'—')+'<br>'+
+    '<span style="color:var(--gray-400)">Required skills:</span> '+((job.required_skills||[]).join(', ')||'—')+'<br>'+
+    '<span style="color:var(--gray-400)">Experience:</span> '+(job.min_years_experience ? job.min_years_experience+'+ years' : 'Not specified')+
+    (job.salary_range ? ' · <span style="color:var(--gray-400)">Salary:</span> '+job.salary_range : '');
+}
+
+function renderJobsGrid(jobs) {
+  const lc={'de':'lang-de','en':'lang-en','fr':'lang-fr','sv':'lang-sv'};
+  const lf={'de':'🇩🇪','en':'🇬🇧','fr':'🇫🇷','sv':'🇸🇪'};
+  document.getElementById('jobsGrid').innerHTML = jobs.map(j =>
+    '<div class="job-card">'+
+    '<div class="job-card-employer">'+j.employer+'</div>'+
+    '<div class="job-card-title">'+j.title+'</div>'+
+    '<div class="job-card-meta">'+
+    '<span class="job-chip '+(lc[j.language]||'')+'">'+lf[j.language]+' '+j.language.toUpperCase()+'</span>'+
+    (j.location?'<span class="job-chip">📍 '+j.location+'</span>':'')+
+    (j.department?'<span class="job-chip">'+j.department+'</span>':'')+
+    (j.seniority?'<span class="job-chip">'+j.seniority+'</span>':'')+
+    (j.salary_range?'<span class="job-chip">💰 '+j.salary_range+'</span>':'')+
+    '</div>'+
+    '<div class="job-card-skills">'+
+    (j.required_skills||[]).slice(0,5).map(s=>'<span class="job-skill-tag">'+s+'</span>').join('')+
+    ((j.required_skills||[]).length>5?'<span class="job-skill-tag">+'+(j.required_skills.length-5)+'</span>':'')+
+    '</div>'+
+    '<div class="job-card-footer">'+
+    '<span>'+(j.min_years_experience?j.min_years_experience+'+ yrs':'Any exp')+'</span>'+
+    '<button class="btn-score-this" onclick="scoreThisJob(\''+j.job_id+'\')">Score a CV →</button>'+
+    '</div></div>').join('');
+}
+
+function filterJobs() {
+  const q=document.getElementById('jobSearch').value.toLowerCase();
+  const lang=document.getElementById('jobLangFilter').value;
+  const dept=document.getElementById('jobDeptFilter').value;
+  renderJobsGrid(allJobs.filter(j =>
+    (!q || j.title.toLowerCase().includes(q) || j.employer.toLowerCase().includes(q)) &&
+    (!lang || j.language===lang) &&
+    (!dept || (j.department||'').toLowerCase().includes(dept))));
+}
+
+function scoreThisJob(jobId) {
+  document.querySelector('input[name="jobSource"][value="example"]').checked = true;
+  ['example','paste','url'].forEach(v => document.getElementById('job_'+v+'_panel').classList.add('hidden'));
+  document.getElementById('job_example_panel').classList.remove('hidden');
+  document.getElementById('exampleJobSelect').value = jobId;
+  showJobPreview();
+  showTab('scoreTab', document.querySelector('.nav-tab'));
+  window.scrollTo(0,0);
+}
+
+async function fetchJDFromUrl() {
+  const url = document.getElementById('jd_url').value.trim();
+  if (!url) { alert('Enter a URL first.'); return; }
+  const st = document.getElementById('fetchStatus');
+  st.textContent = '⏳ Fetching…'; st.className = 'fetch-status';
+  try {
+    const res = await fetch(API+'/fetch-jd', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({url})
+    });
+    const data = await res.json();
+    if (data.success && data.text) {
+      document.getElementById('jd_url_text').value = data.text;
+      st.textContent = '✓ '+data.char_count.toLocaleString()+' chars fetched. Review below.';
+      st.className = 'fetch-status ok';
+    } else {
+      st.textContent = '⚠ Could not auto-fetch: '+(data.error||'site blocked')+'. Please paste manually.';
+      st.className = 'fetch-status err';
+    }
+  } catch(e) { st.textContent='⚠ Network error — paste manually.'; st.className='fetch-status err'; }
+}
+
+async function runATSScoring() {
+  const btn=document.getElementById('runBtn');
+  const btnT=document.getElementById('runBtnText');
+  const spin=document.getElementById('runSpinner');
+  btn.disabled=true; btnT.textContent='Analysing…'; spin.style.display='block';
+
+  const jobSrc = document.querySelector('input[name="jobSource"]:checked').value;
+  const cvSrc  = document.querySelector('input[name="cvSource"]:checked').value;
+  const blind  = document.getElementById('blindModeToggle').checked;
+
+  try {
+    let result;
+
+    if (cvSrc === 'demo') {
+      const jobId = document.getElementById('exampleJobSelect').value;
+      if (!jobId) { alert('Select a job from the library.'); return; }
+      const res = await fetch(API+'/match', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({cv_id: selectedPersona, job_id: jobId})
+      });
+      result = await res.json();
+    } else {
+      const fd = new FormData();
+      // Job
+      if (jobSrc==='example') {
+        const jid=document.getElementById('exampleJobSelect').value;
+        if (!jid) { alert('Select a job from the library.'); return; }
+        fd.append('job_id', jid);
+      } else if (jobSrc==='paste') {
+        const jt=document.getElementById('jd_text').value.trim();
+        if (!jt) { alert('Paste a job description first.'); return; }
+        fd.append('job_text', jt);
+        fd.append('employer', document.getElementById('jd_employer').value||'Company');
+        fd.append('job_title', document.getElementById('jd_title').value||'Open Position');
+        fd.append('job_language', document.getElementById('jd_language').value);
+      } else {
+        const jt=document.getElementById('jd_url_text').value.trim();
+        if (!jt) { alert('Fetch or paste the job description text first.'); return; }
+        fd.append('job_text', jt);
+        fd.append('employer', document.getElementById('jd_url_employer').value||'Company');
+        fd.append('job_title', document.getElementById('jd_url_title').value||'Open Position');
+        fd.append('job_language', document.getElementById('jd_url_language').value);
+      }
+      // CV
+      if (cvSrc==='paste') {
+        const ct=document.getElementById('cv_text').value.trim();
+        if (!ct) { alert('Paste the CV text first.'); return; }
+        fd.append('cv_text', ct);
+        fd.append('candidate_name', document.getElementById('cv_name').value);
+      } else {
+        if (!selectedFile) { alert('Select a CV file first.'); return; }
+        fd.append('cv_file', selectedFile);
+        fd.append('candidate_name', document.getElementById('cv_upload_name').value);
+      }
+      fd.append('blind_mode', blind?'true':'false');
+
+      const res = await fetch(API+'/score', {method:'POST', body:fd});
+      if (!res.ok) { const e=await res.json(); throw new Error(e.detail||'Scoring failed'); }
+      result = await res.json();
+    }
+
+    renderResults(result, blind);
+  } catch(e) {
+    alert('Error: '+e.message); console.error(e);
+  } finally {
+    btn.disabled=false; btnT.textContent='🚀 Run ATS Analysis'; spin.style.display='none';
+  }
+}
+
+function renderResults(r, blind) {
+  document.getElementById('resultsPanel').style.display='block';
+  const score = r.total_score||0;
+  const circ=301.6, offset=circ-(score/100)*circ;
+  const ring=document.getElementById('scoreRing');
+  ring.style.strokeDashoffset=circ;
+  setTimeout(()=>{ring.style.strokeDashoffset=offset;},50);
+  const col=score>=80?'#2ECC71':score>=65?'#3498DB':score>=50?'#F39C12':score>=35?'#E67E22':'#E74C3C';
+  ring.style.stroke=col;
+
+  let cur=0; const tgt=Math.round(score);
+  const iv=setInterval(()=>{ cur=Math.min(cur+2,tgt); document.getElementById('scoreNumber').textContent=cur; if(cur>=tgt)clearInterval(iv); },20);
+
+  document.getElementById('resultJobTitle').textContent=r.job_title||(r.job_parsed&&r.job_parsed.title)||'—';
+  document.getElementById('resultEmployer').textContent=r.employer||(r.job_parsed&&r.job_parsed.employer)||'—';
+
+  const rec=r.recommendation||'NO_MATCH';
+  const ri={STRONG_MATCH:'🏆',GOOD_MATCH:'✅',POSSIBLE_MATCH:'🔵',WEAK_MATCH:'⚠️',NO_MATCH:'❌'}[rec]||'—';
+  const rb=document.getElementById('recBadge');
+  rb.textContent=ri+' '+rec.replace(/_/g,' ');
+  rb.className='recommendation-badge rec-'+rec;
+  document.getElementById('shortlistBadge').style.display=r.shortlist?'inline-flex':'none';
+
+  const rej=document.getElementById('autoRejectedBanner');
+  if(r.auto_rejected){rej.style.display='flex';document.getElementById('autoRejectedReason').textContent=r.auto_rejection_reason||'Hard requirement failed';}
+  else rej.style.display='none';
+
+  document.getElementById('blindModeNote').style.display=blind?'inline':'none';
+
+  // Hard requirements
+  const checks=r.hard_requirement_checks||[];
+  document.getElementById('reqList').innerHTML = checks.length===0
+    ? '<div style="color:var(--gray-400);font-size:13px;padding:10px;">No hard requirements defined for this job.</div>'
+    : checks.map(c=>'<div class="req-item '+(c.result==='pass'?'pass':c.result==='fail'?'fail':'unknown')+'">'+
+        '<div class="req-icon">'+(c.result==='pass'?'✅':c.result==='fail'?'❌':'⚠️')+'</div>'+
+        '<div class="req-text"><div class="req-name">'+c.requirement+'</div><div class="req-detail">'+c.detail+'</div></div>'+
+        '</div>').join('');
+
+  // Breakdown bars
+  const bd=r.breakdown||{};
+  const comps=[
+    {k:'skills_score',    l:'Skills Match',  w:'35%',cl:'#004494'},
+    {k:'experience_score',l:'Experience',    w:'20%',cl:'#1A7A4A'},
+    {k:'education_score', l:'Education',     w:'15%',cl:'#C8960C'},
+    {k:'language_score',  l:'Languages',     w:'15%',cl:'#8E44AD'},
+    {k:'soft_skills_score',l:'Soft Skills',  w:'10%',cl:'#2980B9'},
+    {k:'location_score',  l:'Location',      w:'5%', cl:'#27AE60'},
+  ];
+  document.getElementById('breakdownList').innerHTML=comps.map(c=>{
+    const v=Math.round(bd[c.k]||0);
+    return '<div class="breakdown-item">'+
+      '<div class="breakdown-header"><span class="breakdown-name">'+c.l+'</span><span class="breakdown-value">'+v+'/100</span></div>'+
+      '<div class="breakdown-bar-track"><div class="breakdown-bar-fill" style="background:'+c.cl+'" data-w="'+v+'"></div></div>'+
+      '<div class="breakdown-weight">Weight: '+c.w+'</div></div>';
+  }).join('');
+  setTimeout(()=>{document.querySelectorAll('.breakdown-bar-fill').forEach(el=>{el.style.width=el.dataset.w+'%';});},100);
+
+  // Skills
+  pills('matchedSkills',   r.matched_skills||[],           'pill-matched',   '✓');
+  pills('missingRequired', r.missing_required_skills||[],  'pill-missing',   '✗', true);
+  pills('missingPreferred',r.missing_preferred_skills||[], 'pill-preferred', '🔸');
+  pills('bonusSkills',     r.bonus_skills||[],             'pill-bonus',     '⭐');
+
+  // CV parsed
+  const cvp=r.cv_parsed||{};
+  const chips=[
+    {i:'👤',l:'Name',       v:cvp.full_name||'—'},
+    {i:'⏱', l:'Experience', v:cvp.years_of_experience!=null?cvp.years_of_experience+' yrs':'—'},
+    {i:'📍',l:'Location',   v:cvp.location||'—'},
+    {i:'🎓',l:'Education',  v:cvp.education_level||'—'},
+    {i:'🔧',l:'Skills',     v:cvp.skills_extracted!=null?cvp.skills_extracted+' found':'—'},
+    {i:'🛡', l:'Work Auth',  v:(cvp.eligibility||'—').replace(/_/g,' ')},
+    {i:'📊',l:'Parse Conf.',v:cvp.parse_confidence!=null?Math.round(cvp.parse_confidence*100)+'%':'—'},
+  ];
+  document.getElementById('cvParsedGrid').innerHTML=chips.map(c=>
+    '<div class="cv-chip"><span class="chip-icon">'+c.i+'</span><div><span class="chip-label">'+c.l+'</span><span class="chip-val">'+c.v+'</span></div></div>').join('');
+
+  // Languages
+  const ll={native:100,c2:95,c1:80,b2:65,b1:50,a2:35,a1:20,basic:30};
+  const langs=(cvp.languages_detected||r.language_matches||[]);
+  document.getElementById('langList').innerHTML=langs.length===0
+    ? '<div style="color:var(--gray-400);font-size:12px;">No language info detected in CV</div>'
+    : langs.map(l=>{
+        const lv=(l.level||l.proficiency||'b1').toLowerCase();
+        return '<div class="lang-item"><span class="lang-name">'+(l.language||l.lang||'—')+'</span>'+
+          '<div class="lang-bar-track"><div class="lang-bar-fill" style="width:'+(ll[lv]||50)+'%"></div></div>'+
+          '<span class="lang-level">'+(l.level||l.proficiency||'').toUpperCase()+(l.is_native?' (native)':'')+'</span></div>';
+      }).join('');
+
+  // Radar
+  const rd=comps.map(c=>Math.round(bd[c.k]||0));
+  if(radarChartInstance) radarChartInstance.destroy();
+  radarChartInstance=new Chart(document.getElementById('radarChart'),{
+    type:'radar',
+    data:{labels:['Skills','Exp.','Education','Languages','Soft Skills','Location'],
+      datasets:[{data:rd,backgroundColor:'rgba(0,68,148,0.18)',borderColor:'#004494',pointBackgroundColor:'#004494',borderWidth:2}]},
+    options:{scales:{r:{min:0,max:100,ticks:{display:false},grid:{color:'rgba(0,0,0,.07)'}}},plugins:{legend:{display:false}},animation:{duration:1000}}
+  });
+
+  document.getElementById('recruiterText').textContent=r.recruiter_summary||'—';
+  const tips=r.improvement_tips||[];
+  document.getElementById('tipsList').innerHTML=tips.length===0
+    ? '<div style="color:var(--gray-400);font-size:13px;">No improvement tips — excellent match!</div>'
+    : tips.map((t,i)=>'<div class="tip-item"><div class="tip-num">'+(i+1)+'</div><div>'+t+'</div></div>').join('');
+
+  document.getElementById('resultsPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function pills(id, skills, cls, icon, crit=false) {
+  const el=document.getElementById(id);
+  if(!skills.length){el.innerHTML='<span style="color:var(--gray-400);font-size:12px;">None</span>';return;}
+  el.innerHTML=skills.map(s=>'<span class="skill-pill '+cls+'">'+icon+' '+s.replace(/_/g,' ')+
+    (crit?'<span class="pill-crit">critical</span>':'')+
+    '</span>').join('');
+}
+
+async function runBulkScreen() {
+  const jid=document.getElementById('bulkJobSelect').value;
+  if(!jid){alert('Select a job first');return;}
+  try{
+    const res=await fetch(API+'/match/bulk',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({job_id:jid,cv_ids:['cv-mock-0','cv-mock-1','cv-mock-2','cv-mock-3']})});
+    const data=await res.json();
+    document.getElementById('bulkResults').classList.remove('hidden');
+    document.getElementById('bulkJobTitle').textContent='Rankings — '+data.job_title+' · '+data.employer;
+    const rc={STRONG_MATCH:'#1A7A4A',GOOD_MATCH:'#004494',POSSIBLE_MATCH:'#D4870A',WEAK_MATCH:'#A03000',NO_MATCH:'#C0392B'};
+    document.getElementById('bulkTableBody').innerHTML=(data.rankings||[]).map(r=>{
+      const sc=Math.round(r.total_score||0);
+      const bc=sc>=80?'#2ECC71':sc>=65?'#3498DB':sc>=50?'#F39C12':sc>=35?'#E67E22':'#E74C3C';
+      const rb=r.rank===1?'gold':r.rank===2?'silver':r.rank===3?'bronze':'';
+      return '<tr><td><span class="rank-badge '+rb+'">'+r.rank+'</span></td>'+
+        '<td><strong>'+(r.candidate_name||'Candidate')+'</strong></td>'+
+        '<td><strong>'+sc+'</strong>/100 <div class="score-bar-outer"><div style="width:'+sc+'%;height:100%;background:'+bc+';border-radius:4px;"></div></div></td>'+
+        '<td><span style="color:'+(rc[r.recommendation]||'#333')+';font-weight:600;font-size:12px;">'+(r.recommendation||'').replace(/_/g,' ')+'</span></td>'+
+        '<td>'+(r.shortlist?'<span style="color:#1A7A4A;font-weight:700;">✓ Yes</span>':'<span style="color:#999;">No</span>')+'</td>'+
+        '<td>'+(r.missing_required_count===0?'<span style="color:#1A7A4A;">✓ All pass</span>':'<span style="color:#C0392B;">⚠ '+r.missing_required_count+' missing</span>')+'</td>'+
+        '<td>'+r.matched_skills_count+' skills</td>'+
+        '<td>'+r.missing_required_count+' missing</td></tr>';
+    }).join('');
+  }catch(e){alert('Error: '+e.message);}
+}
+
+function initCharts() {
+  const n='#004494',nv='#002D62',g='#1A7A4A',a='#D4870A',r='#C0392B',go='#C8960C',p='#5B00C8';
+  new Chart(document.getElementById('distChart'),{type:'bar',data:{labels:['0–20','21–40','41–60','61–80','81–100'],datasets:[{label:'Candidates',data:[1,2,5,8,4],backgroundColor:[r,a,'#F1C40F',n,g],borderRadius:6}]},options:{plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1}}}}});
+  new Chart(document.getElementById('matchChart'),{type:'doughnut',data:{labels:['Strong','Good','Possible','Weak','No Match'],datasets:[{data:[4,8,6,3,2],backgroundColor:[g,n,a,r,'#95A5A6'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},cutout:'60%'}});
+  new Chart(document.getElementById('langChart'),{type:'doughnut',data:{labels:['German (DE)','English (EN)','French (FR)','Swedish (SV)'],datasets:[{data:[4,2,1,1],backgroundColor:[nv,n,g,p],borderWidth:0}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},cutout:'60%'}});
+  new Chart(document.getElementById('weightChart'),{type:'doughnut',data:{labels:['Skills 35%','Experience 20%','Education 15%','Languages 15%','Soft Skills 10%','Location 5%'],datasets:[{data:[35,20,15,15,10,5],backgroundColor:[nv,g,go,p,n,a],borderWidth:0}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:11}}}},cutout:'50%'}});
+}
+
+loadJobs();
+initCharts();
+</script>
+</body>
+</html>

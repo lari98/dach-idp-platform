@@ -27,7 +27,8 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api import ats, cvs, gdpr, invoices
 from app.config import get_settings
@@ -134,6 +135,12 @@ def create_app() -> FastAPI:
             },
         )
 
+    # ── Static files (dashboard) ─────────────────────────────────────────────
+    import os
+    dashboard_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dashboard")
+    if os.path.isdir(dashboard_path):
+        app.mount("/dashboard", StaticFiles(directory=dashboard_path, html=True), name="dashboard")
+
     # ── Routers ──────────────────────────────────────────────────────────────
     app.include_router(invoices.router)
     app.include_router(cvs.router)
@@ -180,4 +187,6 @@ if __name__ == "__main__":
         "app.main:app",
         host=settings.app_host,
         port=settings.app_port,
-        reload=settings.app_en
+        reload=settings.app_env.value == "development",
+        log_level=settings.log_level.lower(),
+    )

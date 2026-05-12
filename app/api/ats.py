@@ -16,11 +16,12 @@ Endpoints:
 """
 from __future__ import annotations
 
+import io
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings, get_settings
@@ -309,6 +310,185 @@ async def ats_health():
 # ─────────────────────────────────────────────────────────────────────────────
 # Helper
 # ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Free-form scoring — any company JD + any CV text / PDF upload
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post("/score", response_model=dict, summary="Score any CV against any job")
+async def score_freeform(
+    cv_text: str = Form("", description="Paste CV/resume text here"),
+    cv_file: Optional[UploadFile] = File(None, description="Upload a PDF or .txt CV"),
+    job_id: Optional[str] = Form(None, description="Use an existing job ID from the library"),
+    job_text: str = Form("", description="Or paste any job description text"),
+    employer: str = Form("Company", description="Employer name (when using job_text)"),
+    job_title: str = Form("Open Position", description="Job title (when using job_text)"),
+    job_language: str = Form("en", description="JD language: de / en / fr / sv"),
+    candidate_name: str = Form("", description="Override candidate name (optional)"),
+    blind_mode: bool = Form(False, description="Strip PII from result for bias-free review"),
+    settings: Settings = Depends(get_settings),
+):
+    """
+    Score ANY CV against ANY job description.
+    - Job: provide job_id (from library) OR paste job_text (any company, any language)
+    - CV:  upload a PDF/txt file OR paste cv_text directly
+    Returns the full ATS score breakdown identical to enterprise systems
+    (Taleo / Workday / SAP SuccessFactors scoring model).
+    """
+
+    # ── 1. Resolve Job ────────────────────────────────────────────────────────
+    if job_id:
+        job = get_job(job_id) or _job_store.get(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found in library")
+    elif job_text and job_text.strip():
+        from app.models.ats import EmploymentType, JobLanguage, SeniorityLevel
+        lang_map = {"de": JobLanguage.DE, "en": JobLanguage.EN, "fr": JobLanguage.FR, "sv": JobLanguage.SV}
+        tmp_id = f"JR-CUSTOM-{uuid.uuid4().hex[:8].upper()}"
+        job = JobRequisition(
+            job_id=tmp_id,
+            title=job_title,
+            employer=employer,
+            description_text=job_text,
+            language=lang_map.get(job_language.lower(), JobLanguage.EN),
+        )
+        job = _ats_engine.parse_job_description(job)
+        _job_store[tmp_id] = job          # cache so rankings work
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Provide either job_id or job_text (paste any job description).",
+        )
+
+    # ── 2. Resolve CV text ────────────────────────────────────────────────────
+    raw_cv_text = cv_text.strip()
+
+    if cv_file and not raw_cv_text:
+        content = await cv_file.read()
+        filename = (cv_file.filename or "").lower()
+
+        if filename.endswith(".pdf"):
+            try:
+                import pdfplumber
+                with pdfplumber.open(io.BytesIO(content)) as pdf:
+                    raw_cv_text = "\n".join(page.extract_text() or "" for page in pdf.pages)
+            except ImportError:
+                try:
+                    import PyPDF2
+                    reader = PyPDF2.PdfReader(io.BytesIO(content))
+                    raw_cv_text = "\n".join(p.extract_text() or "" for p in reader.pages)
+                except ImportError:
+                    raw_cv_text = content.decode("utf-8", errors="ignore")
+        else:
+            raw_cv_text = content.decode("utf-8", errors="ignore")
+
+    if not raw_cv_text:
+        raise HTTPException(
+            status_code=400,
+            detail="No CV content found. Please paste CV text or upload a PDF/txt file.",
+        )
+
+    # ── 3. Parse CV text → CVExtractionResult ────────────────────────────────
+    cv = _ats_engine.parse_cv_text(raw_cv_text, candidate_name=candidate_name)
+
+    # ── 4. Run ATS scoring ────────────────────────────────────────────────────
+    result = _ats_engine.match(cv, job)
+    _match_store[result.match_id] = result
+
+    # ── 5. Build enriched response ────────────────────────────────────────────
+    result_dict = result.model_dump()
+
+    # CV parse summary (what the engine found)
+    result_dict["cv_parsed"] = {
+        "full_name": cv.full_name if not blind_mode else "*** (blind mode)",
+        "years_of_experience": cv.years_of_experience,
+        "location": cv.location if not blind_mode else "*** (blind mode)",
+        "education_level": cv.education[0].level.value if cv.education else None,
+        "skills_extracted": len(cv.all_skills),
+        "languages_detected": [
+            {
+                "language": lang.language,
+                "level": lang.proficiency.value if lang.proficiency else "unknown",
+                "is_native": lang.is_native,
+            }
+            for lang in cv.languages
+        ],
+        "parse_confidence": cv.overall_confidence,
+        "requires_review": cv.requires_manual_review,
+        "eligibility": cv.dach_work_eligibility_classification.value,
+    }
+
+    # Job summary
+    result_dict["job_parsed"] = {
+        "job_id": job.job_id,
+        "title": job.title,
+        "employer": job.employer,
+        "language": job.language.value,
+        "required_skills_count": len(job.required_skills),
+        "preferred_skills_count": len(job.preferred_skills),
+        "required_skills": job.required_skills,
+        "preferred_skills": job.preferred_skills,
+        "min_years_experience": job.min_years_experience,
+        "required_education": job.required_education,
+        "required_languages": job.required_languages,
+    }
+
+    return result_dict
+
+
+@router.post("/fetch-jd", response_model=dict, summary="Fetch job description text from a URL")
+async def fetch_jd_from_url(body: dict = Body(...)):
+    """
+    Attempt to fetch plain text from a job posting URL (LinkedIn, StepStone, XING, etc.).
+    Returns extracted text which can be pasted into the score endpoint.
+    Note: Some sites block automated fetching — in that case, copy-paste the JD manually.
+    """
+    url = (body.get("url") or "").strip()
+    if not url:
+        raise HTTPException(status_code=400, detail="'url' field required")
+
+    try:
+        import httpx
+        import re as _re
+
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            ),
+            "Accept-Language": "de-DE,de;q=0.9,en;q=0.8",
+        }
+        async with httpx.AsyncClient(timeout=12.0, follow_redirects=True) as client:
+            resp = await client.get(url, headers=headers)
+            html = resp.text
+
+        # Strip scripts / styles / tags
+        html = _re.sub(r"<script[^>]*>.*?</script>", " ", html, flags=_re.DOTALL | _re.IGNORECASE)
+        html = _re.sub(r"<style[^>]*>.*?</style>", " ", html, flags=_re.DOTALL | _re.IGNORECASE)
+        html = _re.sub(r"<[^>]+>", " ", html)
+        html = _re.sub(r"&[a-z]{2,6};", " ", html)
+        text = _re.sub(r"[ \t]+", " ", html)
+        text = _re.sub(r"\n{3,}", "\n\n", text).strip()
+
+        # Return first 6000 chars (enough for any JD)
+        return {
+            "url": url,
+            "text": text[:6000],
+            "char_count": len(text),
+            "success": True,
+            "note": "Paste this text into the job_text field of /api/v1/ats/score",
+        }
+
+    except Exception as exc:
+        return {
+            "url": url,
+            "text": "",
+            "success": False,
+            "error": str(exc),
+            "note": "Site blocked automated fetching. Please copy-paste the job description manually.",
+        }
+
 
 def _score_distribution(matches: List[ATSMatchResult]) -> dict:
     bands = {"0-20": 0, "21-40": 0, "41-60": 0, "61-80": 0, "81-100": 0}

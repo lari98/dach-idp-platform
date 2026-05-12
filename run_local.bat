@@ -21,9 +21,9 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Install dependencies if needed
-echo  Checking dependencies...
-pip install -r requirements.txt --quiet --break-system-packages 2>nul || pip install -r requirements.txt --quiet
+REM Install core dependencies needed to run in mock mode
+echo  Installing core dependencies...
+pip install fastapi "uvicorn[standard]" pydantic pydantic-settings python-multipart structlog aiofiles python-dotenv sqlalchemy aiosqlite httpx pdfplumber -q
 
 REM Set mock mode environment variables
 set APP_MODE=mock

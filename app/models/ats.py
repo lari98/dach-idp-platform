@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from datetime import date
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -130,8 +130,8 @@ class JobRequisition(BaseModel):
     max_years_experience: Optional[float] = None
     required_education: Optional[str] = Field(None,
         description="bachelor / master / phd / vocational")
-    required_languages: List[Dict[str, str]] = Field(default_factory=list,
-        description="[{'language': 'german_language', 'min_level': 'C1'}]")
+    required_languages: List[Dict[str, Any]] = Field(default_factory=list,
+        description="[{'language': 'german_language', 'min_level': 'C1', 'weight': 1.0}]")
     hard_requirements: List[HardRequirement] = Field(default_factory=list)
 
     # Meta
@@ -203,8 +203,8 @@ class ATSMatchResult(BaseModel):
         description="Skills candidate has that aren't in JD but are relevant")
 
     # Language
-    language_matches: List[Dict[str, str]] = Field(default_factory=list)
-    language_gaps: List[Dict[str, str]] = Field(default_factory=list)
+    language_matches: List[Dict[str, Any]] = Field(default_factory=list)
+    language_gaps: List[Dict[str, Any]] = Field(default_factory=list)
 
     # Improvement
     improvement_tips: List[str] = Field(default_factory=list)

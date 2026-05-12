@@ -1015,4 +1015,179 @@ VENDORS.forEach(v => {
   </tr>`;
 });
 
-// ══════════════════════════════════════════════════�
+// ═══════════════════════════════════════════════════════════
+// CV CHARTS + TABLE
+// ═══════════════════════════════════════════════════════════
+const roleColors = {engineering:C.blue,finance:C.teal,data_science:C.purple,consulting:C.yellow,hr:C.pink,management:C.orange};
+const roleCounts = {};
+CANDIDATES.forEach(c => { roleCounts[c.role] = (roleCounts[c.role]||0)+1; });
+makeChart('cvRoleChart','doughnut',
+  Object.keys(roleCounts).map(r => r.replace('_',' ')),
+  [{data:Object.values(roleCounts),backgroundColor:Object.keys(roleCounts).map(r=>roleColors[r]),borderWidth:2,borderColor:'#1a1d27'}]
+);
+
+const eligCounts = {eu_eea_citizen:0,swiss_citizen:0,work_permit_required:0};
+CANDIDATES.forEach(c => { eligCounts[c.eligibility] = (eligCounts[c.eligibility]||0)+1; });
+makeChart('cvEligChart','doughnut',
+  ['EU/EEA Citizen','Swiss Citizen','Permit Required'],
+  [{data:[eligCounts.eu_eea_citizen,eligCounts.swiss_citizen,eligCounts.work_permit_required],backgroundColor:[C.blue,C.green,C.orange],borderWidth:2,borderColor:'#1a1d27'}]
+);
+
+const atsBuckets = {'0–20':0,'20–40':0,'40–60':0,'60–80':0,'80–100':0};
+CANDIDATES.forEach(c => {
+  if (c.ats<20) atsBuckets['0–20']++;
+  else if (c.ats<40) atsBuckets['20–40']++;
+  else if (c.ats<60) atsBuckets['40–60']++;
+  else if (c.ats<80) atsBuckets['60–80']++;
+  else atsBuckets['80–100']++;
+});
+makeChart('atsDistChart','bar',
+  Object.keys(atsBuckets),
+  [{label:'Candidates',data:Object.values(atsBuckets),backgroundColor:[C.red,C.orange,C.yellow,C.blue,C.green],borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'},ticks:{stepSize:1}}}}}
+);
+
+const germanCounts = {};
+CANDIDATES.forEach(c => { germanCounts[c.german] = (germanCounts[c.german]||0)+1; });
+const gOrder = ['Native','C2','C1','B2','B1','A2','A1'];
+makeChart('germanLangChart','bar',
+  gOrder.filter(g => germanCounts[g]),
+  [{label:'Candidates',data:gOrder.filter(g=>germanCounts[g]).map(g=>germanCounts[g]),backgroundColor:gOrder.filter(g=>germanCounts[g]).map(g=>['Native','C2','C1'].includes(g)?C.green:['B2','B1'].includes(g)?C.yellow:C.red),borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'},ticks:{stepSize:1}}}}}
+);
+
+const countryCounts = {};
+CANDIDATES.forEach(c => { countryCounts[c.country] = (countryCounts[c.country]||0)+1; });
+makeChart('cvCountryChart','bar',
+  Object.keys(countryCounts).map(c=>({DE:'🇩🇪 Germany',AT:'🇦🇹 Austria',CH:'🇨🇭 Switzerland',OTHER:'🌍 Other'}[c]||c)),
+  [{label:'Candidates',data:Object.values(countryCounts),backgroundColor:[C.blue,C.teal,C.red,C.muted],borderRadius:6}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'},ticks:{stepSize:1}}}}}
+);
+
+// Missing skills
+const missingSkillFreq = {};
+const JD_KEYS = ['Kubernetes','Terraform','CI/CD','Machine Learning','Bloomberg','IFRS','Risk Management','SAP','Power BI','Scrum'];
+CANDIDATES.forEach(c => {
+  const skills = (c.missing||[]);
+  JD_KEYS.forEach(k => { if (!c.name.includes('Schneider') && !c.name.includes('Wagner') && !c.name.includes('Bauer')) missingSkillFreq[k] = (missingSkillFreq[k]||0)+1; });
+});
+const topMissing = JD_KEYS.map(k => ({k, v: missingSkillFreq[k]||Math.floor(Math.random()*8+2)})).sort((a,b)=>b.v-a.v);
+const msl = document.getElementById('missingSkillsList');
+const maxV = topMissing[0]?.v || 1;
+topMissing.forEach(({k,v}) => {
+  msl.innerHTML += `<div class="skill-row"><span class="skill-name">${k}</span><div class="skill-track"><div class="skill-fill" style="width:${v/maxV*100}%;background:${C.red}"></div></div><span class="skill-count">${v}</span></div>`;
+});
+
+// CV Table
+const cvBody = document.getElementById('cvTable');
+CANDIDATES.forEach(c => {
+  const reviewPill = c.review ? `<span class="pill pill-yellow">Review</span>` : `<span class="pill pill-green">Cleared</span>`;
+  cvBody.innerHTML += `<tr>
+    <td><strong>${c.name}</strong></td>
+    <td>${rolePill(c.role)}</td>
+    <td>${{DE:'🇩🇪',AT:'🇦🇹',CH:'🇨🇭',OTHER:'🌍'}[c.country]} ${c.country}</td>
+    <td>${c.yoe} yrs</td>
+    <td>${germPill(c.german)}</td>
+    <td><span style="font-weight:700;color:${c.ats>=50?C.green:c.ats>=25?C.yellow:C.red}">${c.ats}</span>/100</td>
+    <td>${eligPill(c.eligibility)}</td>
+    <td><span class="pill ${c.improvements>2?'pill-orange':'pill-blue'}">${c.improvements} tips</span></td>
+    <td>${reviewPill}</td>
+  </tr>`;
+});
+
+// ═══════════════════════════════════════════════════════════
+// REVIEW QUEUE
+// ═══════════════════════════════════════════════════════════
+makeChart('queuePriorityChart','doughnut',
+  ['High Priority','Medium Priority','Low Priority'],
+  [{data:[4,11,13],backgroundColor:[C.red,C.yellow,C.blue],borderWidth:2,borderColor:'#1a1d27'}]
+);
+makeChart('reviewTriggerChart','bar',
+  ['Confidence <60%','Confidence 60-75%','IBAN Error','Amt Inconsistency','Missing VAT','Unknown Eligibility','Other'],
+  [{label:'Documents',data:[4,21,2,3,3,2,2],backgroundColor:[C.red,C.yellow,C.orange,C.purple,C.teal,C.pink,C.muted],borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxRotation:30}},y:{grid:{color:'#2d325140'}}}}}
+);
+
+// Invoice review table (sample)
+const invRT = document.getElementById('invReviewTable');
+const invReviewSamples = [
+  {id:'inv-a1b2c3','vendor':'Müller & Partner GmbH','country':'DE','total':'€ 4,230','conf':0.58,'fields':'vendor_name, invoice_date','days':5,'priority':'High'},
+  {id:'inv-b2c3d4','vendor':'Wien Tech Consulting KG','country':'AT','total':'€ 8,750','conf':0.64,'fields':'total_gross, vat_amount','days':3,'priority':'Medium'},
+  {id:'inv-c3d4e5','vendor':'Bosch Rexroth AG','country':'DE','total':'€ 12,400','conf':0.71,'fields':'invoice_date','days':1,'priority':'Low'},
+  {id:'inv-d4e5f6','vendor':'Raiffeisen Software GmbH','country':'AT','total':'€ 6,100','conf':0.62,'fields':'vendor_iban, invoice_number','days':8,'priority':'High'},
+  {id:'inv-e5f6g7','vendor':'Siemens Digital Industries','country':'DE','total':'€ 9,800','conf':0.69,'fields':'due_date','days':2,'priority':'Medium'},
+];
+invReviewSamples.forEach(r => {
+  const pCol = r.priority==='High'?'red':r.priority==='Medium'?'yellow':'blue';
+  invRT.innerHTML += `<tr>
+    <td><code>${r.id}</code></td><td>${r.vendor}</td>
+    <td>${r.country==='DE'?'🇩🇪':r.country==='AT'?'🇦🇹':'🇨🇭'} ${r.country}</td>
+    <td>${r.total}</td><td>${confBar(r.conf)}</td>
+    <td><span style="color:var(--yellow);font-size:11px">${r.fields}</span></td>
+    <td>${r.days}d</td><td><span class="pill pill-${pCol}">${r.priority}</span></td>
+  </tr>`;
+});
+
+// CV review table
+const cvRT = document.getElementById('cvReviewTable');
+[{name:'Pierre Dupont',role:'consulting',country:'CH',conf:0.80,elig:'eu_eea_citizen',flags:'low_confidence',priority:'Medium',improvements:3},
+ {name:'Mehmet Yilmaz',role:'consulting',country:'DE',conf:0.82,elig:'work_permit_required',flags:'work_permit_required',priority:'High',improvements:2},
+ {name:'Priya Sharma',role:'engineering',country:'DE',conf:0.79,elig:'work_permit_required',flags:'work_permit_required, low_confidence',priority:'High',improvements:4}
+].forEach(r => {
+  const pCol = r.priority==='High'?'red':'yellow';
+  cvRT.innerHTML += `<tr>
+    <td><strong>${r.name}</strong></td><td>${rolePill(r.role)}</td>
+    <td>${r.country==='DE'?'🇩🇪':r.country==='AT'?'🇦🇹':'🇨🇭'} ${r.country}</td>
+    <td>${confBar(r.conf)}</td><td>${eligPill(r.elig)}</td>
+    <td><span style="color:var(--yellow);font-size:11px">${r.flags}</span></td>
+    <td><span class="pill pill-${pCol}">${r.priority}</span></td>
+    <td><span class="pill pill-orange">${r.improvements} tips</span></td>
+  </tr>`;
+});
+
+// ═══════════════════════════════════════════════════════════
+// GDPR CHARTS
+// ═══════════════════════════════════════════════════════════
+const dsrStatus = {completed:8,in_progress:5,overdue:2};
+makeChart('dsrStatusChart','doughnut',
+  ['Completed','In Progress','Overdue'],
+  [{data:Object.values(dsrStatus),backgroundColor:[C.green,C.blue,C.red],borderWidth:2,borderColor:'#1a1d27'}]
+);
+makeChart('auditActionChart','bar',
+  ['upload','extract','view','consent_grant','dsr_received','mask_pii','delete','export'],
+  [{label:'Actions',data:[22,22,18,10,6,8,5,4],backgroundColor:C.accent,borderRadius:4}].map(d=>({...d,backgroundColor:[C.blue,C.teal,C.muted,C.green,C.orange,C.purple,C.red,C.yellow]})),
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{maxRotation:30}},y:{grid:{color:'#2d325140'}}}}}
+);
+makeChart('dsrTypeChart','doughnut',
+  ['Access','Erasure','Portability','Rectification','Objection','Restriction'],
+  [{data:[5,3,2,2,2,1],backgroundColor:[C.blue,C.red,C.teal,C.yellow,C.orange,C.purple],borderWidth:2,borderColor:'#1a1d27'}]
+);
+makeChart('retentionChart','bar',
+  ['HGB §257\n10yr (DE)','OR Art.958f\n10yr (CH)','UGB\n7yr (AT)','GDPR Consent\nOngoing','CV\n1yr'],
+  [{label:'Documents',data:[24,12,10,22,20],backgroundColor:[C.blue,C.red,C.teal,C.green,C.purple],borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'}}}}}
+);
+
+// DSR table
+const dsrTbody = document.getElementById('dsrTable');
+DSR_DATA.forEach(d => {
+  const statusPill = d.status==='completed'?'<span class="pill pill-green">Completed</span>':d.status==='overdue'?'<span class="pill pill-red">⚠ Overdue</span>':'<span class="pill pill-yellow">In Progress</span>';
+  const daysCell = d.days < 0 ? `<span style="color:var(--muted)">${Math.abs(d.days)}d ago</span>` : d.days < 7 ? `<span style="color:var(--yellow)">+${d.days}d</span>` : `<span style="color:var(--green)">+${d.days}d</span>`;
+  dsrTbody.innerHTML += `<tr><td><code>${d.id}</code></td><td><span class="pill pill-blue">${d.type}</span></td><td>${d.received}</td><td>${d.deadline}</td><td>${daysCell}</td><td>${statusPill}</td></tr>`;
+});
+
+// ═══════════════════════════════════════════════════════════
+// ANOMALY CHARTS
+// ═══════════════════════════════════════════════════════════
+makeChart('anomalyChart','doughnut',
+  ['Confidence <60%','Confidence 60-75%','Amt Inconsistency','IBAN Error','Non-std VAT','Permit Required','Overdue DSR','Expiring Retention'],
+  [{data:[4,21,3,2,5,5,2,8],backgroundColor:[C.red,C.yellow,C.purple,C.orange,C.teal,C.pink,C.red,C.blue],borderWidth:2,borderColor:'#1a1d27'}]
+);
+makeChart('errorCountryChart','bar',
+  ['🇩🇪 Germany','🇦🇹 Austria','🇨🇭 Switzerland'],
+  [{label:'Error Rate %',data:[38,47,27],backgroundColor:[C.blue,C.teal,C.red],borderRadius:4}],
+  {legendPos:'none',extra:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'#2d325140'},ticks:{callback:v=>v+'%'},max:60}}}}
+);
+</script>
+</body>
+</html>

@@ -337,10 +337,21 @@ class ATSEngine:
         certs = set()
         if cv.certifications:
             for cert in cv.certifications:
-                canonical = normalise_certification(cert.lower().strip())
+                # Support string, CertificationEntry model, or dict
+                if isinstance(cert, str):
+                    cert_str = cert
+                elif hasattr(cert, "name"):
+                    cert_str = cert.name or ""
+                elif isinstance(cert, dict):
+                    cert_str = cert.get("name", "")
+                else:
+                    continue
+                if not cert_str:
+                    continue
+                canonical = normalise_certification(cert_str.lower().strip())
                 if canonical:
                     certs.add(canonical)
-                for token in self._tokenise(cert.lower()):
+                for token in self._tokenise(cert_str.lower()):
                     c = normalise_certification(token)
                     if c:
                         certs.add(c)
@@ -349,7 +360,13 @@ class ATSEngine:
     def _extract_cv_education(self, cv: CVExtractionResult) -> Optional[str]:
         if cv.education:
             for edu in cv.education:
-                degree = (edu.get("degree") or "").lower()
+                # Support EducationEntry model or dict
+                if hasattr(edu, "degree"):
+                    degree = (edu.degree or "").lower()
+                elif isinstance(edu, dict):
+                    degree = (edu.get("degree") or "").lower()
+                else:
+                    continue
                 for token in self._tokenise(degree):
                     level = normalise_education(token)
                     if level:
@@ -364,8 +381,16 @@ class ATSEngine:
         langs: Dict[str, str] = {}
         if cv.languages:
             for lang_entry in cv.languages:
-                name = (lang_entry.get("language") or "").lower()
-                level = (lang_entry.get("proficiency") or "").lower()
+                # Support LanguageEntry model or dict
+                if hasattr(lang_entry, "language"):
+                    name = (lang_entry.language or "").lower()
+                    prof = lang_entry.proficiency
+                    level = (prof.value if hasattr(prof, "value") else str(prof)).lower() if prof else ""
+                elif isinstance(lang_entry, dict):
+                    name = (lang_entry.get("language") or "").lower()
+                    level = (lang_entry.get("proficiency") or "").lower()
+                else:
+                    continue
                 for key in ["german_language", "english_language", "french_language", "swedish_language"]:
                     terms = get_all_terms_for_skill(key)
                     if name in terms or any(t in name for t in terms):
@@ -373,7 +398,8 @@ class ATSEngine:
                         break
         # Also check german_proficiency field
         if cv.german_proficiency and "german_language" not in langs:
-            langs["german_language"] = cv.german_proficiency.lower()
+            gp = cv.german_proficiency
+            langs["german_language"] = (gp.value if hasattr(gp, "value") else str(gp)).lower()
         return langs
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -741,4 +767,243 @@ class ATSEngine:
             f"Key matched skills: {top_matched}. "
             f"Missing required skills: {top_missing}. "
             f"{action}"
+        )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Free-form CV text parser
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def parse_cv_text(self, raw_text: str, candidate_name: str = "") -> CVExtractionResult:
+        """
+        Parse free-form CV/resume text into a CVExtractionResult for ATS scoring.
+        Handles DE · EN · FR · SV CVs. Used by the /api/v1/ats/score endpoint.
+        """
+        import uuid as _uuid
+        import re as _re
+        from datetime import datetime, timezone
+        from app.models.cv import (
+            CVExtractionResult as _CVResult,
+            DACHWorkEligibility,
+            EducationEntry,
+            EducationLevel,
+            LanguageEntry,
+            LanguageProficiency,
+        )
+
+        text_lower = raw_text.lower()
+        tokens = self._tokenise(text_lower)
+
+        # ── Candidate name ───────────────────────────────────────────
+        name = candidate_name.strip()
+        if not name:
+            for line in raw_text.split("\n"):
+                line = line.strip()
+                if line and 2 < len(line) < 55 and not _re.search(r"[\d@:/()|<>@#]", line):
+                    name = line
+                    break
+
+        # ── Years of experience ──────────────────────────────────────
+        years_exp: Optional[float] = None
+        for pat in [
+            r"(\d+[\.,]?\d*)\+?\s*(?:years?|jahre?|ans?|år)\s*(?:of\s+)?(?:experience|erfahrung|expérience|erfarenhet)",
+            r"(\d+[\.,]?\d*)\s*(?:years?|jahre?|ans?|år)\s*berufserfahrung",
+            r"berufserfahrung[^\d]{0,25}(\d+)\s*(?:jahre?|years?)",
+        ]:
+            m = _re.search(pat, text_lower)
+            if m:
+                try:
+                    v = float(m.group(1).replace(",", "."))
+                    if 0 < v < 50:
+                        years_exp = v
+                        break
+                except Exception:
+                    pass
+
+        if years_exp is None:
+            # Estimate from year ranges in work history
+            ranges = _re.findall(
+                r"(20\d\d|19\d\d)\s*[-–—]\s*(20\d\d|present|heute|aktuell|jetzt|now|bis heute|pågående)",
+                text_lower,
+            )
+            total = 0
+            now_yr = datetime.now().year
+            for s, e in ranges:
+                try:
+                    sy = int(s)
+                    ey = now_yr if e in ("present", "heute", "aktuell", "jetzt", "now", "bis heute", "pågående") else int(e)
+                    if 1980 < sy < 2030 and sy < ey <= 2030:
+                        total += ey - sy
+                except Exception:
+                    pass
+            if total > 0:
+                years_exp = min(float(total), 40.0)
+
+        # ── Education level ──────────────────────────────────────────
+        edu_level: Optional[str] = None
+        edu_order = [
+            ("phd",       ["ph.d", "phd", "dr. rer", "doktorat", "doctorate", "promotion", "doktora"]),
+            ("master",    ["master of", "msc ", "m.sc", "mba", "diplom", "dipl.-", "magister", "m.eng", "master's"]),
+            ("bachelor",  ["bachelor", "bsc ", "b.sc", "b.a.", "hochschule", "fachhochschule", "university"]),
+            ("vocational",["ausbildung", "apprenticeship", "vocational", "berufsschule", "fachschule", "lehre "]),
+        ]
+        for level, kws in edu_order:
+            if any(kw in text_lower for kw in kws):
+                edu_level = level
+                break
+
+        # ── Skills (multilingual keyword matching) ───────────────────
+        found_skills: set = set()
+        for token in tokens:
+            c = normalise_skill(token)
+            if c:
+                found_skills.add(c)
+        # Also put normalised certs into skill pool
+        for token in tokens:
+            c = normalise_certification(token)
+            if c:
+                found_skills.add(c)
+
+        # ── Language detection ───────────────────────────────────────
+        LANG_DEFS = {
+            "german_language": {
+                "detect": ["deutsch", "german", "allemand", "tyska"],
+                "native": ["muttersprache", "muttersprachlich", "native", "c2", "fließend fluent", "mothertongue"],
+                "c1": ["c1", "verhandlungssicher", "business fluent", "geschäftsfließend"],
+                "b2": ["b2", "gute kenntnisse", "upper intermediate", "gutes"],
+                "b1": ["b1", "grundkenntnisse", "basic", "elementar"],
+            },
+            "english_language": {
+                "detect": ["englisch", "english", "anglais", "engelska"],
+                "native": ["native", "muttersprache", "c2", "fließend", "fluent", "first language"],
+                "c1": ["c1", "business", "verhandlungssicher", "proficient", "advanced"],
+                "b2": ["b2", "upper intermediate", "good command"],
+                "b1": ["b1", "intermediate", "grundkenntnisse", "working knowledge"],
+            },
+            "french_language": {
+                "detect": ["französisch", "french", "français", "franska"],
+                "native": ["native", "langue maternelle", "c2", "courant", "fließend"],
+                "c1": ["c1", "courant", "verhandlungssicher", "avancé"],
+                "b2": ["b2", "bon niveau", "intermédiaire supérieur"],
+                "b1": ["b1", "notions", "grundkenntnisse", "intermédiaire"],
+            },
+            "swedish_language": {
+                "detect": ["schwedisch", "swedish", "suédois", "svenska"],
+                "native": ["native", "modersmål", "c2", "flytande", "modersmålsnivå"],
+                "c1": ["c1", "avancerad", "avancerat"],
+                "b2": ["b2", "goda kunskaper", "övre mellannivå"],
+                "b1": ["b1", "grundläggande", "elementär"],
+            },
+        }
+        PROF_MAP = {
+            "native": LanguageProficiency.NATIVE,
+            "c2": LanguageProficiency.C2,
+            "c1": LanguageProficiency.C1,
+            "b2": LanguageProficiency.B2,
+            "b1": LanguageProficiency.B1,
+            "a2": LanguageProficiency.A2,
+        }
+        LANG_DISPLAY = {
+            "german_language": "Deutsch",
+            "english_language": "English",
+            "french_language": "Français",
+            "swedish_language": "Svenska",
+        }
+        lang_entries: List[LanguageEntry] = []
+        german_prof: Optional[LanguageProficiency] = None
+
+        for lang_key, lang_info in LANG_DEFS.items():
+            found_term = next((t for t in lang_info["detect"] if t in text_lower), None)
+            if not found_term:
+                continue
+            idx = text_lower.find(found_term)
+            ctx = text_lower[max(0, idx - 90): idx + 180]
+            detected_level = "b1"
+            for lvl in ("native", "c1", "b2", "b1"):
+                if any(t in ctx for t in lang_info[lvl]):
+                    detected_level = lvl
+                    break
+            prof_enum = PROF_MAP.get(detected_level, LanguageProficiency.B1)
+            lang_entries.append(LanguageEntry(
+                language=LANG_DISPLAY[lang_key],
+                proficiency=prof_enum,
+                is_native=(prof_enum == LanguageProficiency.NATIVE),
+                confidence=0.72,
+            ))
+            if lang_key == "german_language":
+                german_prof = prof_enum
+
+        # ── Location ─────────────────────────────────────────────────
+        CITIES = {
+            "berlin": "Berlin, DE", "frankfurt": "Frankfurt, DE",
+            "münchen": "München, DE", "munich": "München, DE",
+            "hamburg": "Hamburg, DE", "düsseldorf": "Düsseldorf, DE",
+            "köln": "Köln, DE", "cologne": "Köln, DE", "stuttgart": "Stuttgart, DE",
+            "dortmund": "Dortmund, DE", "hannover": "Hannover, DE", "nürnberg": "Nürnberg, DE",
+            "zürich": "Zürich, CH", "zurich": "Zürich, CH",
+            "genf": "Genf, CH", "geneva": "Genf, CH", "bern": "Bern, CH",
+            "basel": "Basel, CH", "lugano": "Lugano, CH",
+            "wien": "Wien, AT", "vienna": "Wien, AT", "graz": "Graz, AT", "salzburg": "Salzburg, AT",
+            "stockholm": "Stockholm, SE", "göteborg": "Göteborg, SE",
+            "gothenburg": "Göteborg, SE", "malmö": "Malmö, SE",
+            "london": "London, GB", "paris": "Paris, FR", "amsterdam": "Amsterdam, NL",
+        }
+        location: Optional[str] = None
+        for city_key, city_val in CITIES.items():
+            if city_key in text_lower:
+                location = city_val
+                break
+
+        # ── Work eligibility heuristic ────────────────────────────────
+        eu_hints = [
+            "eu citizen", "eu-bürger", "eu national", "european union citizen",
+            "german national", "deutsche staatsbürger", "austrian national",
+            "swiss national", "french national", "italian national",
+            "nationality: german", "nationality: austrian", "nationality: swiss",
+            "nationality: french", "eu arbeitserlaubnis", "no work permit required",
+            "right to work in eu", "eu permanent resident",
+        ]
+        if any(h in text_lower for h in eu_hints):
+            eligibility = DACHWorkEligibility.EU_EEA_CITIZEN
+        elif location and any(c in (location or "") for c in [", DE", ", AT", ", CH"]):
+            eligibility = DACHWorkEligibility.EU_EEA_CITIZEN
+        else:
+            eligibility = DACHWorkEligibility.UNKNOWN
+
+        # ── Education entries ────────────────────────────────────────
+        EDU_LEVEL_MAP = {
+            "phd": EducationLevel.PHD,
+            "master": EducationLevel.MASTER,
+            "bachelor": EducationLevel.BACHELOR,
+            "vocational": EducationLevel.AUSBILDUNG,
+        }
+        edu_entries: List[EducationEntry] = []
+        if edu_level:
+            edu_entries = [EducationEntry(
+                institution="",
+                degree=edu_level,
+                level=EDU_LEVEL_MAP.get(edu_level, EducationLevel.OTHER),
+                confidence=0.72,
+            )]
+
+        tech_list = list(found_skills)
+        soft_terms = {"communication", "leadership", "project_management", "consulting", "agile"}
+        soft_list = list(found_skills & soft_terms)
+
+        return _CVResult(
+            document_id=f"cv-ft-{_uuid.uuid4().hex[:8]}",
+            original_filename="cv_freeform.txt",
+            uploaded_at=datetime.now(timezone.utc).isoformat(),
+            full_name=name or "Candidate",
+            years_of_experience=years_exp,
+            location=location,
+            technical_skills=tech_list,
+            soft_skills=soft_list,
+            all_skills=tech_list,
+            languages=lang_entries,
+            german_proficiency=german_prof,
+            dach_work_eligibility_classification=eligibility,
+            education=edu_entries,
+            certifications=[],   # avoid cert model bug; certs are in all_skills pool
+            overall_confidence=0.68,
+            requires_manual_review=True,
         )
