@@ -275,6 +275,12 @@ body{font-family:var(--font);background:var(--gray-50);color:var(--gray-800);fon
 .hidden{display:none!important;}
 .mt-8{margin-top:8px;} .mt-16{margin-top:16px;}
 .section-title{font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;}
+
+/* Language switcher */
+.lang-switcher{display:flex;gap:4px;align-items:center;margin-right:8px;}
+.lang-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:rgba(255,255,255,.80);border-radius:6px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--font);}
+.lang-btn:hover{background:rgba(255,255,255,.22);color:#fff;}
+.lang-btn.active{background:rgba(255,255,255,.26);border-color:rgba(255,255,255,.65);color:#fff;}
 </style>
 </head>
 <body>
@@ -289,19 +295,23 @@ body{font-family:var(--font);background:var(--gray-50);color:var(--gray-800);fon
     </div>
   </div>
   <div class="header-badges">
+    <div class="lang-switcher">
+      <button class="lang-btn active" id="langBtn-en" onclick="setLang('en')">🇬🇧 EN</button>
+      <button class="lang-btn" id="langBtn-de" onclick="setLang('de')">🇩🇪 DE</button>
+      <button class="lang-btn" id="langBtn-fr" onclick="setLang('fr')">🇫🇷 FR</button>
+    </div>
     <span class="badge-pill"><span class="api-dot"></span>API Connected</span>
     <span class="badge-pill">GDPR / DSGVO</span>
     <span class="badge-pill">DE · CH · AT · EU</span>
-    <span class="badge-pill">Multilingual DE/EN/FR/SV</span>
   </div>
 </header>
 
 <!-- NAV -->
 <nav class="nav-bar">
-  <button class="nav-tab active" onclick="showTab('scoreTab',this)">🎯 Score Candidate</button>
-  <button class="nav-tab" onclick="showTab('reqTab',this)">📋 My Requisitions <span class="tab-count" id="myJobCount">0</span></button>
-  <button class="nav-tab" onclick="showTab('bulkTab',this)">📊 Bulk Screen</button>
-  <button class="nav-tab" onclick="showTab('analyticsTab',this)">📈 Analytics</button>
+  <button class="nav-tab active" onclick="showTab('scoreTab',this)"><span data-i18n="tab_score">🎯 Score Candidate</span></button>
+  <button class="nav-tab" onclick="showTab('reqTab',this)"><span data-i18n="tab_req">📋 My Requisitions</span> <span class="tab-count" id="myJobCount">0</span></button>
+  <button class="nav-tab" onclick="showTab('bulkTab',this)"><span data-i18n="tab_bulk">📊 Bulk Screen</span></button>
+  <button class="nav-tab" onclick="showTab('analyticsTab',this)"><span data-i18n="tab_analytics">📈 Analytics</span></button>
 </nav>
 
 <div class="main">
@@ -311,15 +321,15 @@ body{font-family:var(--font);background:var(--gray-50);color:var(--gray-800);fon
 
   <!-- STEP 1: JOB -->
   <div class="card">
-    <div class="card-title"><span class="step-badge">1</span> Select Your Open Position</div>
+    <div class="card-title"><span class="step-badge">1</span> <span data-i18n="step1_title">Select Your Open Position</span></div>
 
     <div class="source-toggle">
       <input type="radio" name="jobSource" id="js_mine" value="mine" checked>
-      <label for="js_mine">📋 My Open Positions</label>
+      <label for="js_mine" data-i18n="js_mine">📋 My Open Positions</label>
       <input type="radio" name="jobSource" id="js_paste" value="paste">
-      <label for="js_paste">✏️ Paste Job Description</label>
+      <label for="js_paste" data-i18n="js_paste">✏️ Paste Job Description</label>
       <input type="radio" name="jobSource" id="js_url" value="url">
-      <label for="js_url">🔗 Fetch from URL</label>
+      <label for="js_url" data-i18n="js_url">🔗 Fetch from URL</label>
     </div>
 
     <!-- My open positions -->
@@ -329,13 +339,13 @@ body{font-family:var(--font);background:var(--gray-50);color:var(--gray-800);fon
           <div class="my-jobs-title">Your Active Requisitions</div>
           <div class="form-hint" style="margin-top:2px;">Jobs you have posted in this ATS — select one to score a candidate against</div>
         </div>
-        <button class="btn-new-job" onclick="openCreateJobModal()">+ Post New Job</button>
+        <button class="btn-new-job" onclick="openCreateJobModal()" data-i18n="btn_new_job">+ Post New Position</button>
       </div>
 
       <!-- Empty state — shown when no user jobs exist -->
       <div id="myJobsEmpty" class="empty-state">
         <div class="empty-icon">📭</div>
-        <div class="empty-title">No open positions yet</div>
+        <div class="empty-title" data-i18n="empty_title">No open positions yet</div>
         <div class="empty-sub">
           Click <strong>"+ Post New Job"</strong> to add your first requisition.<br>
           Paste any job description or fetch it from a URL — works for any company.<br><br>
@@ -347,7 +357,7 @@ body{font-family:var(--font);background:var(--gray-50);color:var(--gray-800);fon
       <div id="myJobsList" class="my-job-list hidden"></div>
 
       <!-- Demo templates separator + list -->
-      <div class="section-sep" id="demoSep">🧪 Demo Templates — Click to try the system</div>
+      <div class="section-sep" id="demoSep" data-i18n="demo_sep">🧪 Demo Templates — Click to try the system</div>
       <div id="demoJobsList" class="my-job-list"></div>
     </div>
 
@@ -432,14 +442,14 @@ The ATS engine automatically extracts:
 
   <!-- STEP 2: CANDIDATE -->
   <div class="card">
-    <div class="card-title"><span class="step-badge">2</span> Candidate CV</div>
+    <div class="card-title"><span class="step-badge">2</span> <span data-i18n="step2_title">Candidate CV</span></div>
     <div class="source-toggle">
       <input type="radio" name="cvSource" id="cv_paste" value="paste" checked>
-      <label for="cv_paste">✏️ Paste CV Text</label>
+      <label for="cv_paste" data-i18n="cv_paste">✏️ Paste CV Text</label>
       <input type="radio" name="cvSource" id="cv_upload" value="upload">
-      <label for="cv_upload">📄 Upload PDF</label>
+      <label for="cv_upload" data-i18n="cv_upload">📄 Upload PDF</label>
       <input type="radio" name="cvSource" id="cv_demo" value="demo">
-      <label for="cv_demo">👤 Demo Profile</label>
+      <label for="cv_demo" data-i18n="cv_demo">👤 Demo Profile</label>
     </div>
 
     <div id="cv_paste_panel">
@@ -527,11 +537,11 @@ The engine extracts:
 
   <!-- STEP 3: OPTIONS -->
   <div class="card" style="padding:16px 24px;">
-    <div class="card-title" style="margin-bottom:12px;"><span class="step-badge">3</span> Scoring Options</div>
+    <div class="card-title" style="margin-bottom:12px;"><span class="step-badge">3</span> <span data-i18n="step3_title">Scoring Options</span></div>
     <div class="options-row">
       <div class="toggle-group">
         <label class="toggle-switch"><input type="checkbox" id="blindModeToggle"><span class="toggle-slider"></span></label>
-        <span class="toggle-label">🙈 Blind Mode <span style="font-size:11px;color:var(--gray-400);">(hide name/location — AGG/EU anti-discrimination)</span></span>
+        <span class="toggle-label"><span data-i18n="blind_label">🙈 Blind Mode</span> <span style="font-size:11px;color:var(--gray-400);" data-i18n="blind_sub">(hide name/location — AGG/EU anti-discrimination)</span></span>
       </div>
       <div class="toggle-group">
         <label class="toggle-switch"><input type="checkbox" id="strictModeToggle" checked><span class="toggle-slider"></span></label>
@@ -543,7 +553,7 @@ The engine extracts:
   </div>
 
   <button class="btn-run" id="runBtn" onclick="runATSScoring()">
-    <span id="runBtnText">🚀 Run ATS Analysis</span>
+    <span id="runBtnText" data-i18n="btn_run">🚀 Run ATS Analysis</span>
     <div class="spinner" id="runSpinner"></div>
   </button>
 
@@ -623,10 +633,10 @@ The engine extracts:
 <div id="reqTab" class="tab-panel">
   <div class="req-tab-header">
     <div>
-      <div class="req-tab-title">My Open Requisitions</div>
+      <div class="req-tab-title" data-i18n="req_tab_title">My Open Requisitions</div>
       <div style="font-size:13px;color:var(--gray-600);margin-top:4px;">All job positions you've posted in this ATS — your company's active roles</div>
     </div>
-    <button class="btn-new-job" onclick="openCreateJobModal()" style="padding:10px 22px;font-size:14px;">+ Post New Position</button>
+    <button class="btn-new-job" onclick="openCreateJobModal()" style="padding:10px 22px;font-size:14px;" data-i18n="btn_new_job">+ Post New Position</button>
   </div>
 
   <div class="kpi-row">
@@ -665,7 +675,7 @@ The engine extracts:
     </div>
   </div>
 
-  <div style="font-size:12px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:24px 0 10px;">Demo Templates — Try the system</div>
+  <div style="font-size:12px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin:24px 0 10px;" data-i18n="req_demo_section">Demo Templates — Try the system</div>
   <div class="jobs-grid" id="demoReqGrid"></div>
 </div>
 
@@ -739,7 +749,7 @@ The engine extracts:
 <div class="modal-overlay hidden" id="createJobModal">
   <div class="modal-box">
     <div class="modal-header">
-      <div class="modal-title">📝 Post New Job Position</div>
+      <div class="modal-title" data-i18n="modal_title">📝 Post New Job Position</div>
       <button class="modal-close" onclick="closeCreateJobModal()">✕</button>
     </div>
     <div class="modal-body">
@@ -800,6 +810,67 @@ The ATS engine will automatically extract:
 
 <script>
 const API = 'http://localhost:8000/api/v1/ats';
+
+// ─── UI Translation ────────────────────────────────────
+const LANG = {
+  en: {
+    tab_score:'🎯 Score Candidate', tab_req:'📋 My Requisitions',
+    tab_bulk:'📊 Bulk Screen', tab_analytics:'📈 Analytics',
+    step1_title:'Select Your Open Position', step2_title:'Candidate CV', step3_title:'Scoring Options',
+    js_mine:'📋 My Open Positions', js_paste:'✏️ Paste Job Description', js_url:'🔗 Fetch from URL',
+    cv_paste:'✏️ Paste CV Text', cv_upload:'📄 Upload PDF', cv_demo:'👤 Demo Profile',
+    btn_run:'🚀 Run ATS Analysis', btn_new_job:'+ Post New Position',
+    empty_title:'No open positions yet',
+    modal_title:'📝 Post New Job Position',
+    req_tab_title:'My Open Requisitions',
+    req_demo_section:'Demo Templates — Try the system',
+    demo_sep:'🧪 Demo Templates — Click to try the system',
+    blind_label:'🙈 Blind Mode', blind_sub:'(hide name/location — AGG/EU anti-discrimination)',
+  },
+  de: {
+    tab_score:'🎯 Kandidat Bewerten', tab_req:'📋 Meine Stellen',
+    tab_bulk:'📊 Massen-Screening', tab_analytics:'📈 Analyse',
+    step1_title:'Stelle auswählen', step2_title:'Lebenslauf (CV)', step3_title:'Bewertungsoptionen',
+    js_mine:'📋 Meine offenen Stellen', js_paste:'✏️ Stellenbeschreibung einfügen', js_url:'🔗 Von URL laden',
+    cv_paste:'✏️ Lebenslauf einfügen', cv_upload:'📄 PDF hochladen', cv_demo:'👤 Demo-Profil',
+    btn_run:'🚀 ATS-Analyse starten', btn_new_job:'+ Neue Stelle aufschalten',
+    empty_title:'Noch keine offenen Stellen',
+    modal_title:'📝 Neue Stelle aufschalten',
+    req_tab_title:'Meine aktiven Ausschreibungen',
+    req_demo_section:'Demo-Vorlagen — System ausprobieren',
+    demo_sep:'🧪 Demo-Vorlagen — Zum Ausprobieren anklicken',
+    blind_label:'🙈 Blind-Modus', blind_sub:'(Name/Ort ausblenden — AGG/EU-Antidiskriminierung)',
+  },
+  fr: {
+    tab_score:'🎯 Évaluer Candidat', tab_req:'📋 Mes Postes',
+    tab_bulk:'📊 Sélection en Masse', tab_analytics:'📈 Analyse',
+    step1_title:'Sélectionner le poste', step2_title:'CV du candidat', step3_title:'Options de scoring',
+    js_mine:'📋 Mes postes ouverts', js_paste:'✏️ Coller la description', js_url:'🔗 Importer via URL',
+    cv_paste:'✏️ Coller le CV', cv_upload:'📄 Télécharger PDF', cv_demo:'👤 Profil démo',
+    btn_run:'🚀 Lancer l\'analyse ATS', btn_new_job:'+ Nouveau poste',
+    empty_title:'Aucun poste ouvert pour l\'instant',
+    modal_title:'📝 Publier un nouveau poste',
+    req_tab_title:'Mes postes actifs',
+    req_demo_section:'Modèles démo — Essayez le système',
+    demo_sep:'🧪 Modèles démo — Cliquez pour essayer',
+    blind_label:'🙈 Mode anonyme', blind_sub:'(masquer nom/lieu — RGPD/anti-discrimination EU)',
+  }
+};
+
+let currentLang = 'en';
+function setLang(lang) {
+  currentLang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    if (LANG[lang] && LANG[lang][key] !== undefined) el.textContent = LANG[lang][key];
+  });
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('langBtn-'+lang);
+  if (btn) btn.classList.add('active');
+  // Update html lang attribute for accessibility
+  document.documentElement.lang = lang;
+}
+
 let allDemoJobs = [];
 let myCreatedJobs = [];  // jobs created by the user in this session
 let selectedJobId = null;
