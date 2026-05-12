@@ -276,6 +276,20 @@ body{font-family:var(--font);background:var(--gray-50);color:var(--gray-800);fon
 .mt-8{margin-top:8px;} .mt-16{margin-top:16px;}
 .section-title{font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;}
 
+/* Job status badges */
+.status-badge{display:inline-flex;align-items:center;gap:4px;border-radius:12px;padding:3px 9px;font-size:11px;font-weight:700;letter-spacing:.2px;}
+.status-active{background:#E6F5EC;color:#1A7A4A;border:1px solid #A8D5B5;}
+.status-closing{background:#FEF5E7;color:#A05A2C;border:1px solid #F5C98A;}
+.status-expired{background:#FDEDEC;color:#C0392B;border:1px solid #F5B7B1;}
+.status-filled{background:#EEF2F8;color:#5B6C8A;border:1px solid #C5CFE4;}
+.deadline-bar{height:4px;border-radius:2px;background:var(--gray-100);margin-top:8px;overflow:hidden;}
+.deadline-fill{height:100%;border-radius:2px;transition:width .6s;}
+.deadline-fill.green{background:#1A7A4A;}
+.deadline-fill.amber{background:#D4870A;}
+.deadline-fill.red{background:#C0392B;}
+.days-left{font-size:11px;color:var(--gray-400);margin-top:4px;}
+.filled-overlay{position:absolute;inset:0;background:rgba(255,255,255,.6);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;z-index:2;font-size:15px;font-weight:700;color:#1A7A4A;gap:8px;}
+
 /* Language switcher */
 .lang-switcher{display:flex;gap:4px;align-items:center;margin-right:8px;}
 .lang-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:rgba(255,255,255,.80);border-radius:6px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:var(--font);}
@@ -379,10 +393,23 @@ body{font-family:var(--font);background:var(--gray-50);color:var(--gray-800);fon
         <div class="form-group">
           <label>JD Language</label>
           <select id="jd_language">
-            <option value="en">🇬🇧 English</option>
-            <option value="de">🇩🇪 Deutsch</option>
-            <option value="fr">🇫🇷 Français</option>
-            <option value="sv">🇸🇪 Svenska</option>
+            <optgroup label="── DACH/Nordic ──">
+              <option value="en">🇬🇧 English</option>
+              <option value="de">🇩🇪 Deutsch</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="sv">🇸🇪 Svenska</option>
+            </optgroup>
+            <optgroup label="── All EU ──">
+              <option value="nl">🇳🇱 Nederlands</option><option value="it">🇮🇹 Italiano</option>
+              <option value="es">🇪🇸 Español</option><option value="pl">🇵🇱 Polski</option>
+              <option value="pt">🇵🇹 Português</option><option value="da">🇩🇰 Dansk</option>
+              <option value="fi">🇫🇮 Suomi</option><option value="cs">🇨🇿 Čeština</option>
+              <option value="ro">🇷🇴 Română</option><option value="hu">🇭🇺 Magyar</option>
+              <option value="el">🇬🇷 Ελληνικά</option><option value="hr">🇭🇷 Hrvatski</option>
+              <option value="sk">🇸🇰 Slovenčina</option><option value="sl">🇸🇮 Slovenščina</option>
+              <option value="bg">🇧🇬 Български</option><option value="et">🇪🇪 Eesti</option>
+              <option value="lv">🇱🇻 Latviešu</option><option value="lt">🇱🇹 Lietuvių</option>
+            </optgroup>
           </select>
         </div>
       </div>
@@ -424,10 +451,20 @@ The ATS engine automatically extracts:
         <div class="form-group">
           <label>Language</label>
           <select id="jd_url_language">
-            <option value="en">🇬🇧 English</option>
-            <option value="de">🇩🇪 Deutsch</option>
-            <option value="fr">🇫🇷 Français</option>
-            <option value="sv">🇸🇪 Svenska</option>
+            <optgroup label="── DACH/Nordic ──">
+              <option value="en">🇬🇧 English</option>
+              <option value="de">🇩🇪 Deutsch</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="sv">🇸🇪 Svenska</option>
+            </optgroup>
+            <optgroup label="── All EU ──">
+              <option value="nl">🇳🇱 Nederlands</option><option value="it">🇮🇹 Italiano</option>
+              <option value="es">🇪🇸 Español</option><option value="pl">🇵🇱 Polski</option>
+              <option value="pt">🇵🇹 Português</option><option value="da">🇩🇰 Dansk</option>
+              <option value="fi">🇫🇮 Suomi</option><option value="cs">🇨🇿 Čeština</option>
+              <option value="ro">🇷🇴 Română</option><option value="hu">🇭🇺 Magyar</option>
+              <option value="el">🇬🇷 Ελληνικά</option><option value="hr">🇭🇷 Hrvatski</option>
+            </optgroup>
           </select>
         </div>
       </div>
@@ -768,22 +805,57 @@ The engine extracts:
         <div class="form-group">
           <label>Language</label>
           <select id="modal_language">
-            <option value="en">🇬🇧 English</option>
-            <option value="de">🇩🇪 Deutsch</option>
-            <option value="fr">🇫🇷 Français</option>
-            <option value="sv">🇸🇪 Svenska</option>
+            <optgroup label="── Main DACH/Nordic ──">
+              <option value="de">🇩🇪 Deutsch</option>
+              <option value="en" selected>🇬🇧 English</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="sv">🇸🇪 Svenska</option>
+            </optgroup>
+            <optgroup label="── All EU Languages ──">
+              <option value="bg">🇧🇬 Български</option>
+              <option value="cs">🇨🇿 Čeština</option>
+              <option value="da">🇩🇰 Dansk</option>
+              <option value="el">🇬🇷 Ελληνικά</option>
+              <option value="es">🇪🇸 Español</option>
+              <option value="et">🇪🇪 Eesti</option>
+              <option value="fi">🇫🇮 Suomi</option>
+              <option value="ga">🇮🇪 Gaeilge</option>
+              <option value="hr">🇭🇷 Hrvatski</option>
+              <option value="hu">🇭🇺 Magyar</option>
+              <option value="it">🇮🇹 Italiano</option>
+              <option value="lt">🇱🇹 Lietuvių</option>
+              <option value="lv">🇱🇻 Latviešu</option>
+              <option value="mt">🇲🇹 Malti</option>
+              <option value="nl">🇳🇱 Nederlands</option>
+              <option value="pl">🇵🇱 Polski</option>
+              <option value="pt">🇵🇹 Português</option>
+              <option value="ro">🇷🇴 Română</option>
+              <option value="sk">🇸🇰 Slovenčina</option>
+              <option value="sl">🇸🇮 Slovenščina</option>
+            </optgroup>
           </select>
         </div>
       </div>
-      <div class="form-row">
+      <div class="form-row three">
         <div class="form-group">
           <label>Location</label>
           <input type="text" id="modal_location" placeholder="e.g. Frankfurt, DE / Remote">
         </div>
         <div class="form-group">
-          <label>Or fetch from URL</label>
+          <label>📅 Application Opens</label>
+          <input type="date" id="modal_open_date">
+        </div>
+        <div class="form-group">
+          <label>📅 Application Deadline <span style="color:var(--red);font-weight:700;">*</span></label>
+          <input type="date" id="modal_close_date">
+          <div class="form-hint" style="margin-top:4px;">After this date the posting auto-archives.</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>🔗 Or fetch Job Description from URL</label>
           <div class="url-row">
-            <input type="url" id="modal_url" placeholder="https://…">
+            <input type="url" id="modal_url" placeholder="LinkedIn, StepStone, XING, your careers page…">
             <button class="btn-fetch" onclick="fetchJDModal()">⬇ Fetch</button>
           </div>
         </div>
@@ -953,16 +1025,19 @@ function jobListItem(j, isDemo) {
   const langDot = `<span class="lang-dot" style="background:${langColor}"></span>`;
   const selected = selectedJobId === j.job_id ? ' selected-job' : '';
   const demoClass = isDemo ? ' is-demo' : '';
-  const iconClass = isDemo ? 'demo' : 'mine';
   const iconEmoji = isDemo ? '📋' : '💼';
   const badge = isDemo
     ? '<span class="mji-badge demo">DEMO</span>'
     : '<span class="mji-badge mine">MY JOB</span>';
-  return `<div class="my-job-item${selected}${demoClass}" onclick="selectJobFromList('${j.job_id}',${isDemo},this)">
-    <div class="mji-icon ${iconClass}">${iconEmoji}</div>
+  const status = !isDemo ? getJobStatus(j) : null;
+  const statusTag = status ? `<span class="status-badge ${status.cls}" style="font-size:10px;padding:2px 7px;">${status.label}</span>` : '';
+  // Dim filled/archived jobs
+  const opacity = (!isDemo && (j._filled || j._archived)) ? ' style="opacity:.55;"' : '';
+  return `<div class="my-job-item${selected}${demoClass}"${opacity} onclick="selectJobFromList('${j.job_id}',${isDemo},this)">
+    <div class="mji-icon ${isDemo?'demo':'mine'}">${iconEmoji}</div>
     <div class="mji-body">
-      <div class="mji-title">${j.title}</div>
-      <div class="mji-meta">${langDot}${j.employer}${j.location ? ' · '+j.location : ''}${j.min_years_experience ? ' · '+j.min_years_experience+'+ yrs' : ''}</div>
+      <div class="mji-title">${j.title} ${statusTag}</div>
+      <div class="mji-meta">${langDot}${j.employer}${j.location ? ' · '+j.location : ''}${j.close_date ? ' · 📅 '+new Date(j.close_date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : ''}</div>
     </div>
     ${badge}
   </div>`;
@@ -977,17 +1052,26 @@ function selectJobFromList(jobId, isDemo, el) {
 
 // ─── Requisitions tab rendering ───────────────────────
 function renderRequisitionsTab() {
-  // My jobs grid
   const myGrid = document.getElementById('myReqGrid');
-  if (myCreatedJobs.length === 0) {
-    myGrid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--gray-400);">
+  const active = myCreatedJobs.filter(j => !j._archived && !j._filled);
+  const closed = myCreatedJobs.filter(j => j._archived || j._filled);
+
+  let html = '';
+  if (active.length === 0 && closed.length === 0) {
+    html = `<div style="grid-column:1/-1;text-align:center;padding:32px;color:var(--gray-400);">
       <div style="font-size:32px;margin-bottom:8px;">📭</div>
       <div style="font-weight:600;color:var(--gray-600);">No positions posted yet</div>
       <div style="font-size:12.5px;margin-top:6px;">Click "+ Post New Position" to add your company's open roles</div>
     </div>`;
   } else {
-    myGrid.innerHTML = myCreatedJobs.map(j => jobReqCard(j, false)).join('');
+    if (active.length) html += active.map(j => jobReqCard(j, false)).join('');
+    if (closed.length) html += `
+      <div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:.5px;margin-top:12px;padding-top:16px;border-top:1px solid var(--gray-100);">
+        📁 Closed / Filled Requisitions
+      </div>
+      ${closed.map(j => jobReqCard(j, false)).join('')}`;
   }
+  myGrid.innerHTML = html;
   // Demo grid
   document.getElementById('demoReqGrid').innerHTML = allDemoJobs.map(j => jobReqCard(j, true)).join('');
   updateCounts();
@@ -995,30 +1079,36 @@ function renderRequisitionsTab() {
 
 function jobReqCard(j, isDemo) {
   const lc={de:'lang-de',en:'lang-en',fr:'lang-fr',sv:'lang-sv'};
-  const lf={de:'🇩🇪',en:'🇬🇧',fr:'🇫🇷',sv:'🇸🇪'};
+  const lf={de:'🇩🇪',en:'🇬🇧',fr:'🇫🇷',sv:'🇸🇪',nl:'🇳🇱',it:'🇮🇹',es:'🇪🇸',pl:'🇵🇱',pt:'🇵🇹',da:'🇩🇰',fi:'🇫🇮',cs:'🇨🇿',ro:'🇷🇴',hu:'🇭🇺',el:'🇬🇷',hr:'🇭🇷'};
   const demoClass = isDemo ? 'is-demo' : 'is-mine';
-  const badge = isDemo
-    ? '<span class="job-chip demo-chip">DEMO TEMPLATE</span>'
-    : '<span class="job-chip mine">MY POSITION</span>';
-  const delBtn = isDemo ? '' : `<button class="btn-del-job" onclick="deleteMyJob('${j.job_id}',event)" title="Delete">🗑</button>`;
-  return `<div class="job-card ${demoClass}">
+  const badge = isDemo ? '<span class="job-chip demo-chip">DEMO TEMPLATE</span>' : '<span class="job-chip mine">MY POSITION</span>';
+  const status = !isDemo ? getJobStatus(j) : null;
+  const statusBadge = status ? `<span class="status-badge ${status.cls}">${status.label}</span>` : '';
+  const bar = !isDemo ? deadlineBar(j) : '';
+  const actionBtns = isDemo ? '' : `
+    <button class="btn-del-job" onclick="archiveJob('${j.job_id}',event)" title="Archive" style="background:#EEF2F8;color:#5B6C8A;">📁</button>
+    ${!j._filled ? `<button class="btn-del-job" onclick="markAsFilled('${j.job_id}',event)" title="Mark as Filled" style="background:#E6F5EC;color:#1A7A4A;">✅</button>` : ''}
+    <button class="btn-del-job" onclick="deleteMyJob('${j.job_id}',event)" title="Delete permanently">🗑</button>`;
+  const filledOverlay = (j._filled && !isDemo) ? `<div class="filled-overlay">✅ Position Filled · ${j._filledDate||''}</div>` : '';
+  return `<div class="job-card ${demoClass}" style="position:relative;">
+    ${filledOverlay}
     <div class="job-card-employer">${j.employer}</div>
     <div class="job-card-title">${j.title}</div>
     <div class="job-card-meta">
-      ${badge}
-      <span class="job-chip ${lc[j.language]||''}">${lf[j.language]||''} ${j.language.toUpperCase()}</span>
+      ${badge}${statusBadge}
+      <span class="job-chip ${lc[j.language]||''}">${lf[j.language]||''} ${(j.language||'?').toUpperCase()}</span>
       ${j.location?'<span class="job-chip">📍 '+j.location+'</span>':''}
       ${j.seniority?'<span class="job-chip">'+j.seniority+'</span>':''}
-      ${j.salary_range?'<span class="job-chip">💰 '+j.salary_range+'</span>':''}
     </div>
-    <div class="job-card-skills">
+    ${bar}
+    <div class="job-card-skills" style="margin-top:8px;">
       ${(j.required_skills||[]).slice(0,5).map(s=>'<span class="job-skill-tag">'+s+'</span>').join('')}
       ${(j.required_skills||[]).length>5?'<span class="job-skill-tag">+'+(j.required_skills.length-5)+'</span>':''}
     </div>
     <div class="job-card-footer">
       <span>${j.min_years_experience?j.min_years_experience+'+ yrs':'Any exp'}</span>
       <div style="display:flex;gap:6px;align-items:center;">
-        ${delBtn}
+        ${actionBtns}
         <button class="btn-score-this" onclick="scoreThisJob('${j.job_id}')">Score Candidate →</button>
       </div>
     </div>
@@ -1055,10 +1145,16 @@ function scoreThisJob(jobId) {
 }
 
 // ─── Create job modal ─────────────────────────────────
-function openCreateJobModal() { document.getElementById('createJobModal').classList.remove('hidden'); }
+function openCreateJobModal() {
+  // Set default open date to today, close date to +30 days
+  const today = new Date(); const close = new Date(); close.setDate(today.getDate()+30);
+  document.getElementById('modal_open_date').value = today.toISOString().split('T')[0];
+  document.getElementById('modal_close_date').value = close.toISOString().split('T')[0];
+  document.getElementById('createJobModal').classList.remove('hidden');
+}
 function closeCreateJobModal() {
   document.getElementById('createJobModal').classList.add('hidden');
-  ['modal_employer','modal_title','modal_location','modal_url','modal_jd_text'].forEach(id => document.getElementById(id).value='');
+  ['modal_employer','modal_title','modal_location','modal_url','modal_jd_text','modal_open_date','modal_close_date'].forEach(id => document.getElementById(id).value='');
   document.getElementById('modal_fetch_status').style.display='none';
 }
 
@@ -1081,13 +1177,59 @@ async function fetchJDModal() {
   } catch(e) { st.textContent='⚠ Error — paste manually.'; st.className='fetch-status err'; }
 }
 
+// ─── Job lifecycle helpers ────────────────────────────
+function getJobStatus(j) {
+  if (j._filled) return {code:'filled', label:'✅ Filled', cls:'status-filled'};
+  if (!j.close_date) return {code:'active', label:'🟢 Active', cls:'status-active'};
+  const now = new Date(); now.setHours(0,0,0,0);
+  const close = new Date(j.close_date); close.setHours(0,0,0,0);
+  const daysLeft = Math.ceil((close - now) / 86400000);
+  if (daysLeft < 0) return {code:'expired', label:'🔴 Expired', cls:'status-expired'};
+  if (daysLeft <= 7) return {code:'closing', label:`⚠️ Closing in ${daysLeft}d`, cls:'status-closing'};
+  return {code:'active', label:`🟢 ${daysLeft}d left`, cls:'status-active'};
+}
+
+function deadlineBar(j) {
+  if (!j.open_date || !j.close_date) return '';
+  const open = new Date(j.open_date); const close = new Date(j.close_date);
+  const now = new Date();
+  const total = close - open; const elapsed = now - open;
+  const pct = Math.min(100, Math.max(0, Math.round(elapsed/total*100)));
+  const color = pct > 85 ? 'red' : pct > 60 ? 'amber' : 'green';
+  const closeStr = close.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  return `<div class="deadline-bar"><div class="deadline-fill ${color}" style="width:${pct}%"></div></div>
+    <div class="days-left">📅 Closes ${closeStr} · ${pct}% of posting period elapsed</div>`;
+}
+
+function markAsFilled(jobId, ev) {
+  ev.stopPropagation();
+  if (!confirm('Mark this position as Filled? It will be archived and removed from active scoring.')) return;
+  const j = myCreatedJobs.find(x=>x.job_id===jobId);
+  if (j) { j._filled = true; j._filledDate = new Date().toISOString().split('T')[0]; }
+  renderMyPositionsPanel(); renderRequisitionsTab(); populateBulkSelect();
+}
+
+function archiveJob(jobId, ev) {
+  ev.stopPropagation();
+  if (!confirm('Archive this position? It will be stored in closed requisitions.')) return;
+  const j = myCreatedJobs.find(x=>x.job_id===jobId);
+  if (j) j._archived = true;
+  if (selectedJobId === jobId) selectedJobId = null;
+  renderMyPositionsPanel(); renderRequisitionsTab(); populateBulkSelect();
+}
+
 async function saveNewJob() {
-  const employer = document.getElementById('modal_employer').value.trim();
-  const title    = document.getElementById('modal_title').value.trim();
-  const jdText   = document.getElementById('modal_jd_text').value.trim();
-  const language = document.getElementById('modal_language').value;
-  const location = document.getElementById('modal_location').value.trim();
+  const employer  = document.getElementById('modal_employer').value.trim();
+  const title     = document.getElementById('modal_title').value.trim();
+  const jdText    = document.getElementById('modal_jd_text').value.trim();
+  const language  = document.getElementById('modal_language').value;
+  const location  = document.getElementById('modal_location').value.trim();
+  const openDate  = document.getElementById('modal_open_date').value;
+  const closeDate = document.getElementById('modal_close_date').value;
   if (!employer || !title || !jdText) { alert('Please fill in Company, Job Title, and Job Description.'); return; }
+  if (closeDate && openDate && closeDate <= openDate) { alert('Application Deadline must be after Open Date.'); return; }
+  const btnSave = document.querySelector('.btn-save');
+  btnSave.disabled = true; btnSave.textContent = '⏳ Parsing JD…';
   try {
     const res = await fetch(API+'/jobs',{
       method:'POST',
@@ -1099,6 +1241,9 @@ async function saveNewJob() {
       job_id: data.job_id,
       title, employer, language,
       location: location||null,
+      open_date: openDate || new Date().toISOString().split('T')[0],
+      close_date: closeDate || null,
+      _filled: false, _archived: false,
       is_active: true,
       required_skills: data.parsed_required_skills||[],
       preferred_skills: data.parsed_preferred_skills||[],
@@ -1109,16 +1254,14 @@ async function saveNewJob() {
     myCreatedJobs.unshift(newJob);
     selectedJobId = newJob.job_id;
     closeCreateJobModal();
-    renderMyPositionsPanel();
-    renderRequisitionsTab();
-    populateBulkSelect();
-    // Switch to Score tab and select mine source
+    renderMyPositionsPanel(); renderRequisitionsTab(); populateBulkSelect();
     document.querySelector('input[name="jobSource"][value="mine"]').checked = true;
     ['mine','paste','url'].forEach(v => document.getElementById('job_'+v+'_panel').classList.add('hidden'));
     document.getElementById('job_mine_panel').classList.remove('hidden');
     showTab('scoreTab', document.querySelector('.nav-tab'));
     window.scrollTo(0,0);
   } catch(e) { alert('Error saving job: '+e.message); }
+  finally { btnSave.disabled = false; btnSave.innerHTML = '💾 Save &amp; Post Job'; }
 }
 
 // ─── Bulk select populate ─────────────────────────────
